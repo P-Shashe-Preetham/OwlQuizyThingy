@@ -39,13 +39,15 @@ export const createInviteCode = (length = 6) => {
 }
 
 export const timeToPoint = (startTime: number, secondes: number): number => {
-  let points = 1000
-
   const actualTime = Date.now()
   const tempsPasseEnSecondes = (actualTime - startTime) / 1000
 
-  points -= (1000 / secondes) * tempsPasseEnSecondes
-  points = Math.max(0, points)
+  // Kahoot official formula ensures minimum 500 points for correct answer
+  const maxPoints = 1000
+  const decrement = maxPoints / (2 * secondes)
+  let points = maxPoints - (decrement * tempsPasseEnSecondes)
+  
+  points = Math.round(Math.max(500, Math.min(1000, points)))
 
   return points
 }
