@@ -1,5 +1,5 @@
 import { Server } from "@rahoot/common/types/game/socket"
-import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
+import { Quizz } from "@rahoot/common/types/game"
 import { inviteCodeValidator } from "@rahoot/common/validators/auth"
 import Config from "@rahoot/socket/services/config"
 import FirebaseService from "@rahoot/socket/services/firebase"
@@ -93,8 +93,23 @@ io.on("connection", (socket) => {
     }
   })
 
+  socket.on("manager:deleteQuizz", async (id) => {
+    try {
+      if (FirebaseService.isInitialized()) {
+        await FirebaseService.deleteQuizz(id)
+        const firebaseQuizzes = await FirebaseService.getQuizzes()
+        socket.emit("manager:quizzList", firebaseQuizzes)
+      } else {
+        socket.emit("manager:errorMessage", "Firebase not configured. Cannot delete.")
+      }
+    } catch (error) {
+      console.error("Failed to delete quiz:", error)
+      socket.emit("manager:errorMessage", "Failed to delete quiz")
+    }
+  })
+
   socket.on("game:create", async (quizzId) => {
-    let quizz;
+    let quizz: Quizz | null = null
     
     if (FirebaseService.isInitialized()) {
         const quizzes = await FirebaseService.getQuizzes()

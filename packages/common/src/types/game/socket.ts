@@ -74,6 +74,7 @@ export interface ClientToServerEvents {
   "game:create": (_quizzId: string) => void
   "manager:auth": (_password: string) => void
   "manager:saveQuizz": (_quizz: Quizz) => void
+  "manager:deleteQuizz": (_id: string) => void
   "manager:reconnect": (_message: { gameId: string }) => void
   "manager:kickPlayer": (_message: { gameId: string; playerId: string }) => void
   "manager:startGame": (_message: MessageGameId) => void
@@ -86,7 +87,7 @@ export interface ClientToServerEvents {
   "player:login": (_message: MessageWithoutStatus<{ username: string }>) => void
   "player:reconnect": (_message: { gameId: string }) => void
   "player:selectedAnswer": (
-    _message: MessageWithoutStatus<{ answerKey: number }>,
+    _message: MessageWithoutStatus<{ answerKey: number | string }>,
   ) => void
 
   // Common

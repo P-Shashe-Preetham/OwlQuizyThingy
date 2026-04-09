@@ -8,7 +8,7 @@ export type Player = {
 
 export type Answer = {
   playerId: string
-  answerId: number
+  answerId: number | string
   points: number
 }
 
@@ -19,6 +19,7 @@ export type Quizz = {
     classicMode?: boolean
   }
   questions: {
+    type?: "quiz" | "type-answer"
     question: string
     image?: string
     video?: string

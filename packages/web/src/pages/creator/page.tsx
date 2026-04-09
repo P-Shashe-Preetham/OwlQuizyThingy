@@ -1,6 +1,6 @@
-import { useState } from "react"
-import { useNavigate } from "react-router"
-import type { Quizz } from "@rahoot/common/types/game"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router"
+import type { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import Triangle from "@rahoot/web/features/game/components/icons/Triangle"
 import Rhombus from "@rahoot/web/features/game/components/icons/Rhombus"
 import Circle from "@rahoot/web/features/game/components/icons/Circle"
@@ -17,11 +17,13 @@ type PartialQuestion = Quizz['questions'][number]
 const CreatorPage = () => {
   const { socket } = useSocket()
   const navigate = useNavigate()
+  const location = useLocation()
   const [subject, setSubject] = useState("My Awesome Quiz")
   const [classicMode, setClassicMode] = useState(false)
   const [theme, setTheme] = useState("default")
   const [questions, setQuestions] = useState<PartialQuestion[]>([
     {
+      type: "quiz",
       question: "What is 2 + 2?",
       answers: ["3", "4", "5", "6"],
       solution: 1,
@@ -30,6 +32,37 @@ const CreatorPage = () => {
     }
   ])
   const [selectedIdx, setSelectedIdx] = useState(0)
+  const [id, setId] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (location.state?.quizz) {
+      const q = location.state.quizz as QuizzWithId
+      setId(q.id)
+      setSubject(q.subject)
+      setClassicMode(q.settings?.classicMode || false)
+      setTheme(q.settings?.theme || "default")
+      setQuestions(q.questions.map(question => ({...question, type: question.type || "quiz"})))
+    } else {
+      const draft = localStorage.getItem("draft_quizz")
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft)
+          setSubject(parsed.subject)
+          setClassicMode(parsed.settings?.classicMode || false)
+          setTheme(parsed.settings?.theme || "default")
+          setQuestions(parsed.questions)
+        } catch(e) {}
+      }
+    }
+  }, [location.state])
+
+  useEffect(() => {
+    localStorage.setItem("draft_quizz", JSON.stringify({
+      subject,
+      settings: { classicMode, theme },
+      questions
+    }))
+  }, [subject, classicMode, theme, questions])
 
   useEvent("manager:quizzSaved", ({ subject }) => {
     toast.success(`Quiz "${subject}" saved successfully!`)
@@ -42,7 +75,8 @@ const CreatorPage = () => {
   const handleSave = () => {
     if (!socket) return
     
-    const quizData: Quizz = {
+    const quizData: Quizz & { id?: string } = {
+      ...(id ? { id } : {}),
       subject,
       settings: {
         theme,
@@ -55,11 +89,13 @@ const CreatorPage = () => {
     }
 
     socket.emit("manager:saveQuizz", quizData)
+    localStorage.removeItem("draft_quizz")
   }
 
   const addQuestion = () => {
     console.log("Adding question...")
     setQuestions([...questions, {
+      type: "quiz",
       question: "New Question",
       answers: ["Option 1", "Option 2", "Option 3", "Option 4"],
       solution: 0,
@@ -217,20 +253,40 @@ const CreatorPage = () => {
                   />
                </div>
                
-               {/* Controls */}
-               <div className="flex flex-col gap-4 justify-center">
+                <div className="flex flex-col gap-4 justify-center">
                   <div className="bg-slate-800 p-4 rounded-3xl border border-white/10 shadow-xl">
-                    <label className="block text-xs font-black text-slate-500 uppercase mb-3 text-center tracking-widest">Time Limit</label>
+                    <label className="block text-xs font-black text-slate-500 uppercase mb-3 text-center tracking-widest">Question Type</label>
                     <select 
+                      value={currentQ.type || "quiz"}
+                      onChange={(e) => {
+                        const newType = e.target.value as any
+                        const update: Partial<PartialQuestion> = { type: newType }
+                        if (newType === "type-answer" && currentQ.answers.length > 1) {
+                          update.answers = [currentQ.answers[0]]
+                        } else if (newType === "quiz" && currentQ.answers.length < 4) {
+                          const newAns = [...currentQ.answers]
+                          while (newAns.length < 4) newAns.push(`Option ${newAns.length + 1}`)
+                          update.answers = newAns
+                        }
+                        updateQuestion(update)
+                      }}
+                      className="bg-slate-900 px-6 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-primary font-bold transition-all w-full text-center text-sm cursor-pointer relative z-30"
+                    >
+                      <option value="quiz">Multiple Choice</option>
+                      <option value="type-answer">Type Answer</option>
+                    </select>
+                  </div>
+                  
+                  <div className="bg-slate-800 p-4 rounded-3xl border border-white/10 shadow-xl">
+                    <label className="block text-xs font-black text-slate-500 uppercase mb-3 text-center tracking-widest">Time Limit (s)</label>
+                    <input 
+                      type="number"
+                      min="5"
+                      max="360"
                       value={currentQ.time}
                       onChange={(e) => updateQuestion({ time: Number(e.target.value) })}
                       className="bg-slate-900 px-6 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-primary font-bold transition-all w-full text-center text-xl cursor-pointer relative z-30"
-                    >
-                      <option value={10}>10 sec</option>
-                      <option value={20}>20 sec</option>
-                      <option value={30}>30 sec</option>
-                      <option value={60}>60 sec</option>
-                    </select>
+                    />
                   </div>
                   
                   <div className="bg-slate-800 p-4 rounded-3xl border border-white/10 shadow-xl">
@@ -239,28 +295,57 @@ const CreatorPage = () => {
                        <button className="px-5 py-2 rounded-xl bg-primary font-bold shadow-lg shadow-primary/20">Standard</button>
                     </div>
                   </div>
+
+                  {currentQ.type === "type-answer" && (
+                    <div className="bg-slate-800 p-4 rounded-3xl border border-white/10 shadow-xl">
+                      <label className="block text-xs font-black text-slate-500 uppercase mb-3 text-center tracking-widest">Accepted Variants</label>
+                      <input 
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={currentQ.answers.length}
+                        onChange={(e) => {
+                          const count = Math.max(1, Number(e.target.value))
+                          const newAns = [...currentQ.answers]
+                          if (count > newAns.length) {
+                            while (newAns.length < count) newAns.push("")
+                          } else {
+                            newAns.length = count
+                          }
+                          updateQuestion({ answers: newAns })
+                        }}
+                        className="bg-slate-900 px-6 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-primary font-bold transition-all w-full text-center text-xl cursor-pointer relative z-30"
+                      />
+                    </div>
+                  )}
                </div>
             </div>
 
             {/* Answer Options */}
-            <div className="grid grid-cols-2 gap-6 pb-12">
+            <div className={clsx(
+              "gap-6 pb-12",
+              currentQ.type === "type-answer" ? "flex flex-col max-w-2xl mx-auto w-full" : "grid grid-cols-2"
+            )}>
               {currentQ.answers.map((ans, i) => (
                 <div key={i} className={clsx(
                   "relative group flex items-center h-24 rounded-2xl shadow-xl transition-all duration-300 border-4",
-                  ANSWERS_COLORS[i],
-                  currentQ.solution === i ? "border-white/50 scale-[1.02] shadow-white/10" : "border-white/5 opacity-80 hover:opacity-100 hover:scale-[1.01]"
+                  currentQ.type === "type-answer"
+                    ? "border-white/10 bg-white/5 opacity-100 focus-within:border-primary/50 focus-within:bg-white/10"
+                    : `${ANSWERS_COLORS[i]} ${currentQ.solution === i ? "border-white/50 scale-[1.02] shadow-white/10" : "border-white/5 opacity-80 hover:opacity-100 hover:scale-[1.01]"}`
                 )}>
-                  <div 
-                    className="p-4 cursor-pointer hover:scale-110 transition-transform active:scale-95"
-                    onClick={() => updateQuestion({ solution: i })}
-                  >
-                    <div className={clsx(
-                      "w-10 h-10 rounded-full border-2 border-white flex items-center justify-center font-bold text-xl",
-                      currentQ.solution === i ? "bg-white text-slate-900" : "bg-transparent text-white"
-                    )}>
-                      {currentQ.solution === i ? "✓" : ""}
+                  {currentQ.type !== "type-answer" && (
+                    <div 
+                      className="p-4 cursor-pointer hover:scale-110 transition-transform active:scale-95"
+                      onClick={() => updateQuestion({ solution: i })}
+                    >
+                      <div className={clsx(
+                        "w-10 h-10 rounded-full border-2 border-white flex items-center justify-center font-bold text-xl",
+                        currentQ.solution === i ? "bg-white text-slate-900" : "bg-transparent text-white"
+                      )}>
+                        {currentQ.solution === i ? "✓" : ""}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <input 
                     value={ans}
                     onChange={(e) => {
@@ -268,11 +353,14 @@ const CreatorPage = () => {
                       newAns[i] = e.target.value
                       updateQuestion({ answers: newAns })
                     }}
-                    className="flex-1 bg-transparent text-2xl font-bold px-4 focus:outline-none placeholder:text-white/30"
-                    placeholder={`Answer ${i + 1}`}
+                    className={clsx(
+                      "flex-1 bg-transparent text-2xl font-bold px-4 focus:outline-none placeholder:text-white/30",
+                      currentQ.type === "type-answer" && "ml-4"
+                    )}
+                    placeholder={currentQ.type === "type-answer" ? `Accepted Answer ${i + 1}` : `Answer ${i + 1}`}
                   />
                   <div className="absolute right-6 opacity-40 pointer-events-none group-focus-within:opacity-100 transition-opacity">
-                    {Icons[i] && (
+                    {Icons[i] && currentQ.type !== "type-answer" && (
                         (() => {
                             const Icon = Icons[i]
                             return <Icon className="w-8 h-8 text-white fill-current" />

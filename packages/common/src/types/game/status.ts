@@ -20,6 +20,7 @@ export type CommonStatusDataMap = {
   SHOW_PREPARED: { totalAnswers: number; questionNumber: number }
   SHOW_QUESTION: { question: string; image?: string; cooldown: number }
   SELECT_ANSWER: {
+    type?: "quiz" | "type-answer"
     question: string
     answers: string[]
     image?: string
@@ -43,9 +44,10 @@ export type CommonStatusDataMap = {
 type ManagerExtraStatus = {
   SHOW_ROOM: { text: string; inviteCode?: string }
   SHOW_RESPONSES: {
+    type?: "quiz" | "type-answer"
     question: string
-    responses: Record<number, number>
-    correct: number
+    responses: Record<number | string, number>
+    correct: number | string[]
     answers: string[]
     image?: string
     video?: string

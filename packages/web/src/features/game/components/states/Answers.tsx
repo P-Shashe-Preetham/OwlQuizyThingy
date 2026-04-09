@@ -21,7 +21,7 @@ type Props = {
 }
 
 const Answers = ({
-  data: { question, answers, image, audio, video, time, totalPlayer },
+  data: { type, question, answers, image, audio, video, time, totalPlayer },
 }: Props) => {
   const { gameId }: { gameId?: string } = useParams()
   const { socket } = useSocket()
@@ -29,6 +29,8 @@ const Answers = ({
 
   const [cooldown, setCooldown] = useState(time)
   const [totalAnswer, setTotalAnswer] = useState(0)
+  const [typedAnswer, setTypedAnswer] = useState("")
+  const [hasSubmitted, setHasSubmitted] = useState(false)
 
   const [sfxPop] = useSound(SFX_ANSWERS_SOUND, {
     volume: 0.1,
@@ -51,6 +53,18 @@ const Answers = ({
         answerKey,
       },
     })
+    sfxPop()
+  }
+
+  const handleTextSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!player || hasSubmitted || !typedAnswer.trim()) return
+
+    socket?.emit("player:selectedAnswer", {
+      gameId,
+      data: { answerKey: typedAnswer.trim() },
+    })
+    setHasSubmitted(true)
     sfxPop()
   }
 
@@ -126,23 +140,56 @@ const Answers = ({
           </div>
         </div>
 
-        <div
-          className={clsx(
-            "mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-2 px-2 text-lg font-bold text-white md:text-xl",
-            player && "flex-1 grid-rows-2 pb-4",
-          )}
-        >
-          {answers.map((answer, key) => (
-            <AnswerButton
-              key={key}
-              className={clsx(ANSWERS_COLORS[key], player && "h-full")}
-              icon={ANSWERS_ICONS[key]}
-              onClick={handleAnswer(key)}
-            >
-              {!player && answer}
-            </AnswerButton>
-          ))}
-        </div>
+        {type === "type-answer" ? (
+          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center px-4">
+            {player ? (
+              hasSubmitted ? (
+                <h3 className="text-2xl font-bold text-white text-center">Answer submitted! Waiting for others...</h3>
+              ) : (
+                <form 
+                  onSubmit={handleTextSubmit} 
+                  className="flex w-full max-w-lg flex-col gap-4 bg-white/10 p-6 rounded-2xl border border-white/20 shadow-xl"
+                >
+                  <label className="text-white text-lg font-bold text-center">Type your answer</label>
+                  <input
+                    type="text"
+                    value={typedAnswer}
+                    onChange={(e) => setTypedAnswer(e.target.value)}
+                    className="w-full rounded-xl p-4 text-2xl font-bold text-black focus:outline-none focus:ring-4 focus:ring-primary/50 text-center"
+                    placeholder="Enter your answer..."
+                    autoFocus
+                  />
+                  <button 
+                    type="submit" 
+                    className="w-full rounded-xl bg-primary py-4 text-xl font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 shadow-lg"
+                  >
+                    Submit
+                  </button>
+                </form>
+              )
+            ) : (
+              <h3 className="text-2xl font-bold text-white/50 text-center animate-pulse">Players are typing their answers...</h3>
+            )}
+          </div>
+        ) : (
+          <div
+            className={clsx(
+              "mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-2 px-2 text-lg font-bold text-white md:text-xl",
+              player && "flex-1 grid-rows-2 pb-4",
+            )}
+          >
+            {answers.map((answer, key) => (
+              <AnswerButton
+                key={key}
+                className={clsx(ANSWERS_COLORS[key], player && "h-full")}
+                icon={ANSWERS_ICONS[key]}
+                onClick={handleAnswer(key)}
+              >
+                {!player && answer}
+              </AnswerButton>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -373,6 +373,7 @@ class Game {
     this.round.startTime = Date.now()
 
     this.broadcastStatus(STATUS.SELECT_ANSWER, {
+      type: question.type,
       question: question.question,
       answers: question.answers,
       image: question.image,
@@ -398,7 +399,7 @@ class Game {
         : this.leaderboard.map((p) => ({ ...p }))
 
     const totalType = this.round.playersAnswers.reduce(
-      (acc: Record<number, number>, { answerId }) => {
+      (acc: Record<string | number, number>, { answerId }) => {
         acc[answerId] = (acc[answerId] || 0) + 1
 
         return acc
@@ -412,9 +413,14 @@ class Game {
           (a) => a.playerId === player.id,
         )
 
-        const isCorrect = playerAnswer
-          ? playerAnswer.answerId === question.solution
-          : false
+        let isCorrect = false
+        if (playerAnswer) {
+          if (question.type === "type-answer") {
+            isCorrect = question.answers.some((a: string) => a.trim().toLowerCase() === String(playerAnswer.answerId).trim().toLowerCase())
+          } else {
+            isCorrect = playerAnswer.answerId === question.solution
+          }
+        }
 
         const points =
           playerAnswer && isCorrect ? Math.round(playerAnswer.points) : 0
@@ -442,9 +448,10 @@ class Game {
     })
 
     this.sendStatus(this.manager.id, STATUS.SHOW_RESPONSES, {
+      type: question.type,
       question: question.question,
       responses: totalType,
-      correct: question.solution,
+      correct: question.type === "type-answer" ? question.answers : question.solution,
       answers: question.answers,
       image: question.image,
     })
@@ -454,7 +461,7 @@ class Game {
 
     this.round.playersAnswers = []
   }
-  selectAnswer(socket: Socket, answerId: number) {
+  selectAnswer(socket: Socket, answerId: number | string) {
     const player = this.players.find((player) => player.id === socket.id)
     const question = this.quizz.questions[this.round.currentQuestion]
 
