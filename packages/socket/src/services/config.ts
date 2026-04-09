@@ -76,21 +76,27 @@ class Config {
   }
 
   static game() {
+    let configObj: any = {}
+
     const isExists = fs.existsSync(getPath("game.json"))
-
-    if (!isExists) {
-      throw new Error("Game config not found")
+    if (isExists) {
+      try {
+        const config = fs.readFileSync(getPath("game.json"), "utf-8")
+        configObj = JSON.parse(config)
+      } catch (error) {
+        console.error("Failed to read game config:", error)
+      }
+    } else {
+        console.error("Game config not found, falling back to defaults")
     }
 
-    try {
-      const config = fs.readFileSync(getPath("game.json"), "utf-8")
-
-      return JSON.parse(config)
-    } catch (error) {
-      console.error("Failed to read game config:", error)
+    if (process.env.MANAGER_PASSWORD) {
+        configObj.managerPassword = process.env.MANAGER_PASSWORD
+    } else if (!configObj.managerPassword) {
+        configObj.managerPassword = "PASSWORD"
     }
 
-    return {}
+    return configObj
   }
 
   static quizz() {
