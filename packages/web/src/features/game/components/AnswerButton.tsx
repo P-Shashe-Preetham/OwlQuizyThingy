@@ -18,13 +18,14 @@ const AnswerButton = ({
 }: Props) => (
   <button
     className={clsx(
-      "shadow-inset flex items-center gap-3 rounded px-4 py-6 text-left",
+      "shadow-inset flex items-center rounded px-4 py-6 text-left",
+      children ? "gap-3" : "justify-center",
       className,
     )}
     {...otherProps}
   >
-    <Icon className="h-6 w-6" />
-    <span className="drop-shadow-md">{children}</span>
+    <Icon className={clsx(children ? "h-6 w-6" : "h-16 w-16 drop-shadow-md")} />
+    {children && <span className="drop-shadow-md">{children}</span>}
   </button>
 )
 

@@ -13,6 +13,7 @@
     "@rahoot/socket": "workspace:*",
     "@tailwindcss/vite": "^4.2.1",
     "clsx": "^2.1.1",
+    "firebase": "^12.11.0",
     "motion": "^12.36.0",
     "react": "^19.2.4",
     "react-confetti": "^6.4.0",

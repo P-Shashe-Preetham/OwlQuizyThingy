@@ -483,7 +483,7 @@ class Game {
     this.io.to(this.gameId).emit("game:totalPlayers", this.players.length)
 
     if (this.round.playersAnswers.length === this.players.length) {
-      this.abortCooldown()
+      // Early reveal disabled: timer will run to zero
     }
   }
 

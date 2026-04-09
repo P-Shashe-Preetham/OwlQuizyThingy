@@ -8,7 +8,7 @@ import {
 } from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
 import { useState } from "react"
-import { useNavigate } from "react-router"
+import { useNavigate, Link } from "react-router"
 
 const ManagerAuthPage = () => {
   const { setGameId, setStatus } = useManagerStore()
@@ -41,7 +41,17 @@ const ManagerAuthPage = () => {
     return <ManagerPassword onSubmit={handleAuth} />
   }
 
-  return <SelectQuizz quizzList={quizzList} onSelect={handleCreate} />
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <SelectQuizz quizzList={quizzList} onSelect={handleCreate} />
+      <Link
+        to="/creator"
+        className="z-20 w-full max-w-md bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-6 rounded-xl border-2 border-dashed border-white/20 hover:border-white/40 transition-all flex items-center justify-center gap-2 no-underline"
+      >
+        <span className="text-2xl">+</span> Create New Quiz
+      </Link>
+    </div>
+  )
 }
 
 export default ManagerAuthPage

@@ -78,37 +78,39 @@ const Answers = ({
 
   return (
     <div className="flex h-full flex-1 flex-col justify-between">
-      <div className="mx-auto inline-flex h-full w-full max-w-7xl flex-1 flex-col items-center justify-center gap-5">
-        <h2 className="text-center text-2xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">
-          {question}
-        </h2>
+      {!player && (
+        <div className="mx-auto inline-flex h-full w-full max-w-7xl flex-1 flex-col items-center justify-center gap-5">
+          <h2 className="text-center text-2xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">
+            {question}
+          </h2>
 
-        {Boolean(audio) && !player && (
-          <audio
-            className="m-4 mb-2 w-auto rounded-md"
-            src={audio}
-            autoPlay
-            controls
-          />
-        )}
+          {Boolean(audio) && (
+            <audio
+              className="m-4 mb-2 w-auto rounded-md"
+              src={audio}
+              autoPlay
+              controls
+            />
+          )}
 
-        {Boolean(video) && !player && (
-          <video
-            className="m-4 mb-2 aspect-video max-h-60 w-auto rounded-md px-4 sm:max-h-100"
-            src={video}
-            autoPlay
-            controls
-          />
-        )}
+          {Boolean(video) && (
+            <video
+              className="m-4 mb-2 aspect-video max-h-60 w-auto rounded-md px-4 sm:max-h-100"
+              src={video}
+              autoPlay
+              controls
+            />
+          )}
 
-        {Boolean(image) && (
-          <img
-            alt={question}
-            src={image}
-            className="mb-2 max-h-60 w-auto rounded-md px-4 sm:max-h-100"
-          />
-        )}
-      </div>
+          {Boolean(image) && (
+            <img
+              alt={question}
+              src={image}
+              className="mb-2 max-h-60 w-auto rounded-md px-4 sm:max-h-100"
+            />
+          )}
+        </div>
+      )}
 
       <div>
         <div className="mx-auto mb-4 flex w-full max-w-7xl justify-between gap-1 px-2 text-lg font-bold text-white md:text-xl">
@@ -124,15 +126,20 @@ const Answers = ({
           </div>
         </div>
 
-        <div className="mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-1 rounded-full px-2 text-lg font-bold text-white md:text-xl">
+        <div
+          className={clsx(
+            "mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-2 px-2 text-lg font-bold text-white md:text-xl",
+            player && "flex-1 grid-rows-2 pb-4",
+          )}
+        >
           {answers.map((answer, key) => (
             <AnswerButton
               key={key}
-              className={clsx(ANSWERS_COLORS[key])}
+              className={clsx(ANSWERS_COLORS[key], player && "h-full")}
               icon={ANSWERS_ICONS[key]}
               onClick={handleAnswer(key)}
             >
-              {answer}
+              {!player && answer}
             </AnswerButton>
           ))}
         </div>

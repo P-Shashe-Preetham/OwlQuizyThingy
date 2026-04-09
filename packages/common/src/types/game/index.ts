@@ -14,6 +14,10 @@ export type Answer = {
 
 export type Quizz = {
   subject: string
+  settings?: {
+    theme?: string
+    classicMode?: boolean
+  }
   questions: {
     question: string
     image?: string

@@ -1,6 +1,7 @@
 import type {
   GameUpdateQuestion,
   Player,
+  Quizz,
   QuizzWithId,
 } from "@rahoot/common/types/game"
 import type { Status, StatusDataMap } from "@rahoot/common/types/game/status"
@@ -65,12 +66,14 @@ export interface ServerToClientEvents {
   "manager:removePlayer": (_playerId: string) => void
   "manager:errorMessage": (_message: string) => void
   "manager:playerKicked": (_playerId: string) => void
+  "manager:quizzSaved": (_data: { id: string; subject: string }) => void
 }
 
 export interface ClientToServerEvents {
   // Manager actions
   "game:create": (_quizzId: string) => void
   "manager:auth": (_password: string) => void
+  "manager:saveQuizz": (_quizz: Quizz) => void
   "manager:reconnect": (_message: { gameId: string }) => void
   "manager:kickPlayer": (_message: { gameId: string; playerId: string }) => void
   "manager:startGame": (_message: MessageGameId) => void

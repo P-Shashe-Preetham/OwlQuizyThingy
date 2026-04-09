@@ -1,6 +1,8 @@
 import { Server } from "@rahoot/common/types/game/socket"
+import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import { inviteCodeValidator } from "@rahoot/common/validators/auth"
 import Config from "@rahoot/socket/services/config"
+import FirebaseService from "@rahoot/socket/services/firebase"
 import Game from "@rahoot/socket/services/game"
 import Registry from "@rahoot/socket/services/registry"
 import { withGame } from "@rahoot/socket/utils/game"
@@ -47,7 +49,7 @@ io.on("connection", (socket) => {
     socket.emit("game:reset", "Game expired")
   })
 
-  socket.on("manager:auth", (password) => {
+  socket.on("manager:auth", async (password) => {
     try {
       const config = Config.game()
 
@@ -63,16 +65,46 @@ io.on("connection", (socket) => {
         return
       }
 
-      socket.emit("manager:quizzList", Config.quizz())
+      // Fetch quizzes from Firebase if initialized, otherwise fallback to local config
+      if (FirebaseService.isInitialized()) {
+        const firebaseQuizzes = await FirebaseService.getQuizzes()
+        socket.emit("manager:quizzList", firebaseQuizzes)
+      } else {
+        socket.emit("manager:quizzList", Config.quizz())
+      }
     } catch (error) {
       console.error("Failed to read game config:", error)
       socket.emit("manager:errorMessage", "Failed to read game config")
     }
   })
 
-  socket.on("game:create", (quizzId) => {
-    const quizzList = Config.quizz()
-    const quizz = quizzList.find((q) => q.id === quizzId)
+  socket.on("manager:saveQuizz", async (quizz) => {
+    try {
+      if (FirebaseService.isInitialized()) {
+        const id = await FirebaseService.saveQuizz(quizz)
+        socket.emit("manager:quizzSaved", { id, subject: quizz.subject })
+      } else {
+        // Fallback or warning if firebase is not setup
+        socket.emit("manager:errorMessage", "Firebase not configured. Quiz not saved.")
+      }
+    } catch (error) {
+      console.error("Failed to save quiz:", error)
+      socket.emit("manager:errorMessage", "Failed to save quiz")
+    }
+  })
+
+  socket.on("game:create", async (quizzId) => {
+    let quizz;
+    
+    if (FirebaseService.isInitialized()) {
+        const quizzes = await FirebaseService.getQuizzes()
+        quizz = quizzes.find(q => q.id === quizzId)
+    }
+    
+    if (!quizz) {
+        const quizzList = Config.quizz()
+        quizz = quizzList.find((q) => q.id === quizzId)
+    }
 
     if (!quizz) {
       socket.emit("game:errorMessage", "Quizz not found")

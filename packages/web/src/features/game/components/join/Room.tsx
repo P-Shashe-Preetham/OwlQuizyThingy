@@ -7,7 +7,7 @@ import {
 } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import { type KeyboardEvent, useEffect, useRef, useState } from "react"
-import { useSearchParams } from "react-router"
+import { useSearchParams, Link } from "react-router"
 
 const Room = () => {
   const { socket, isConnected } = useSocket()
@@ -49,6 +49,11 @@ const Room = () => {
         placeholder="PIN Code here"
       />
       <Button onClick={handleJoin}>Submit</Button>
+      <div className="text-center">
+        <Link to="/manager" className="text-sm text-gray-500 hover:text-gray-800 hover:underline">
+          Host a game
+        </Link>
+      </div>
     </Form>
   )
 }
