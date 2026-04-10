@@ -1,5 +1,5 @@
 import { Server } from "@rahoot/common/types/game/socket"
-import { Quizz } from "@rahoot/common/types/game"
+import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import { inviteCodeValidator } from "@rahoot/common/validators/auth"
 import Config from "@rahoot/socket/services/config"
 import FirebaseService from "@rahoot/socket/services/firebase"
@@ -65,13 +65,22 @@ io.on("connection", (socket) => {
         return
       }
 
-      // Fetch quizzes from Firebase if initialized, otherwise fallback to local config
+      // Fetch both local and Firebase quizzes
+      const localQuizzes = Config.quizz()
+      let firebaseQuizzes: QuizzWithId[] = []
+
       if (FirebaseService.isInitialized()) {
-        const firebaseQuizzes = await FirebaseService.getQuizzes()
-        socket.emit("manager:quizzList", firebaseQuizzes)
-      } else {
-        socket.emit("manager:quizzList", Config.quizz())
+        firebaseQuizzes = await FirebaseService.getQuizzes()
       }
+
+      // Merge them, prioritizing Firebase if IDs collide (though they shouldn't usually)
+      const firebaseIds = new Set(firebaseQuizzes.map((q) => q.id))
+      const combinedQuizzList = [
+        ...firebaseQuizzes,
+        ...localQuizzes.filter((q) => !firebaseIds.has(q.id)),
+      ]
+
+      socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
       console.error("Failed to read game config:", error)
       socket.emit("manager:errorMessage", "Failed to read game config")

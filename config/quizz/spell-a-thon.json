@@ -1,0 +1,425 @@
+{
+  "subject": "Spell-A-Thon",
+  "questions": [
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: N_C__SS__RY",
+      "answers": [
+        "NECESSARY"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: SEP__R__TE",
+      "answers": [
+        "SEPARATE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: O_C__S__ON",
+      "answers": [
+        "OCCASION"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: MAINT__N__NCE",
+      "answers": [
+        "MAINTENANCE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: CONSC__ENCE",
+      "answers": [
+        "CONSCIENCE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: PRON__NCI__T__ON",
+      "answers": [
+        "PRONUNCIATION"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: PR_V__L__GE",
+      "answers": [
+        "PRIVILEGE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: O_T_ _IZE",
+      "answers": [
+        "OPTIMIZE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: RH__T_M",
+      "answers": [
+        "RHYTHM"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: MISC__LL__NE__US",
+      "answers": [
+        "MISCELLANEOUS"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 1 – Finish the Word: ID__S__NCR__SY",
+      "answers": [
+        "IDIOSYNCRASY"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: NTELEPHO",
+      "answers": [
+        "TELEPHONE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: RINAG",
+      "answers": [
+        "GRAIN"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: PLEPAER",
+      "answers": [
+        "PREPARE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: NOITACUDE",
+      "answers": [
+        "EDUCATION"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: POMTCURE",
+      "answers": [
+        "COMPUTER"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: SUTDENT",
+      "answers": [
+        "STUDENT"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: NGEENI",
+      "answers": [
+        "ENGINE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: NOITAVONNI",
+      "answers": [
+        "INNOVATION"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: ROPGMARNIM",
+      "answers": [
+        "PROGRAMMING"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: NOITACINUMMOC",
+      "answers": [
+        "COMMUNICATION"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 2 – Scrambled Words: RTEPRETNI",
+      "answers": [
+        "INTERPRETER"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🐝 + 🍃",
+      "answers": [
+        "BELIEF"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🌞 + 🌻",
+      "answers": [
+        "SUNFLOWER"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🐱 + 🐟",
+      "answers": [
+        "CATFISH"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🐶 + 🏠",
+      "answers": [
+        "DOGHOUSE"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🌧️ + 🌈",
+      "answers": [
+        "RAINBOW"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 👁️ + 💡",
+      "answers": [
+        "IDEA"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🐻 + 🦶",
+      "answers": [
+        "BAREFOOT"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🧂 + 🌊",
+      "answers": [
+        "SALTWATER"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🌙 + 🚶",
+      "answers": [
+        "MOONWALK"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 3 – Emoji Words: 🔥 + 🐦",
+      "answers": [
+        "FIREBIRD"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Funny",
+      "answers": [
+        "Bunny"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Lazy",
+      "answers": [
+        "Crazy"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Happy",
+      "answers": [
+        "Snappy"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Chilly",
+      "answers": [
+        "Silly"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Bus",
+      "answers": [
+        "Fuss"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Hack",
+      "answers": [
+        "Back"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Zoom",
+      "answers": [
+        "Room"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Mouse",
+      "answers": [
+        "House"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Data",
+      "answers": [
+        "Beta"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    },
+    {
+      "type": "type-answer",
+      "question": "Round 4 – Rhyme Time: Tech",
+      "answers": [
+        "Check"
+      ],
+      "solution": 0,
+      "cooldown": 5,
+      "time": 20
+    }
+  ]
+}
