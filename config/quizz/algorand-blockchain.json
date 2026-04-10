@@ -1,0 +1,395 @@
+{
+  "subject": "Algorand & Blockchain Quiz",
+  "questions": [
+    {
+      "question": "What consensus mechanism does Algorand use?",
+      "answers": [
+        "Proof of Work",
+        "Delegated Proof of Stake",
+        "Pure Proof of Stake",
+        "Proof of Authority"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "How does Algorand achieve fast transaction finality?",
+      "answers": [
+        "Mining rewards",
+        "Sharding",
+        "Byzantine Agreement protocol",
+        "Longer block times"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is the primary use of ALGO tokens?",
+      "answers": [
+        "Mining only",
+        "Transaction fees and governance",
+        "Data storage",
+        "Smart contract deployment only"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is the role of relay nodes in Algorand?",
+      "answers": [
+        "Validate transactions",
+        "Store private keys",
+        "Facilitate communication",
+        "Mine blocks"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Participation nodes are responsible for:",
+      "answers": [
+        "Storing blockchain history",
+        "Proposing and voting on blocks",
+        "Creating tokens",
+        "Running dApps"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is cryptographic sortition?",
+      "answers": [
+        "Manual validator selection",
+        "Random validator selection using VRF",
+        "Token burning process",
+        "Data encryption method"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What does ASA stand for?",
+      "answers": [
+        "Algorand Secure Algorithm",
+        "Algorand Standard Asset",
+        "Automated Staking Application",
+        "Advanced Smart Agreement"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Algorand smart contracts are commonly written in:",
+      "answers": [
+        "Solidity",
+        "Python",
+        "TEAL",
+        "Rust"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What type of language is TEAL?",
+      "answers": [
+        "Object-oriented",
+        "Stack-based",
+        "Functional",
+        "Assembly-free"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is Layer-1 in blockchain?",
+      "answers": [
+        "External scaling solution",
+        "Base blockchain protocol",
+        "Cloud storage layer",
+        "API layer"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "How does Algorand handle forks?",
+      "answers": [
+        "Frequent forks",
+        "Occasional forks",
+        "Avoids forks entirely",
+        "Forks manually"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Byzantine Fault Tolerance means:",
+      "answers": [
+        "Nodes must always agree",
+        "System works despite malicious nodes",
+        "Only trusted nodes participate",
+        "Nodes cannot fail"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is a blockchain ledger?",
+      "answers": [
+        "Central database",
+        "Distributed transaction record",
+        "Banking system",
+        "File storage system"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What does decentralization mean?",
+      "answers": [
+        "Single authority control",
+        "Distributed control across nodes",
+        "No data storage",
+        "Faster transactions only"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "A hash function does what?",
+      "answers": [
+        "Encrypts private keys",
+        "Converts data into fixed-length output",
+        "Stores transactions",
+        "Verifies identity"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is a private key?",
+      "answers": [
+        "Public address",
+        "Shared password",
+        "Secret key to sign transactions",
+        "Blockchain ID"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "A public key is used to:",
+      "answers": [
+        "Sign transactions",
+        "Mine blocks",
+        "Receive funds",
+        "Store data"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is a node?",
+      "answers": [
+        "A type of token",
+        "A blockchain user",
+        "A computer maintaining the blockchain",
+        "A smart contract"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is staking?",
+      "answers": [
+        "Mining coins",
+        "Locking tokens to participate",
+        "Burning tokens",
+        "Transferring funds"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is a block?",
+      "answers": [
+        "A smart contract",
+        "A set of transactions",
+        "A private key",
+        "A wallet"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is gas in blockchain systems?",
+      "answers": [
+        "Storage space",
+        "Network speed",
+        "Transaction execution fee",
+        "Token supply"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Algorand transaction fees are:",
+      "answers": [
+        "High and variable",
+        "Low and fixed",
+        "Free",
+        "Based on mining difficulty"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is a dApp?",
+      "answers": [
+        "Centralized application",
+        "Blockchain-based application",
+        "Mobile-only app",
+        "Database tool"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is interoperability?",
+      "answers": [
+        "Token creation",
+        "Blockchain communication",
+        "Mining efficiency",
+        "Data encryption"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "A smart contract is:",
+      "answers": [
+        "Legal document",
+        "Manual script",
+        "Self-executing code",
+        "Database query"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "What is the genesis block?",
+      "answers": [
+        "Last block",
+        "First block",
+        "Largest block",
+        "Invalid block"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Tokenization refers to:",
+      "answers": [
+        "Mining coins",
+        "Converting assets into tokens",
+        "Encrypting data",
+        "Validating blocks"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Finality means:",
+      "answers": [
+        "Transaction speed",
+        "Transaction irreversibility",
+        "Network size",
+        "Token supply"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "A validator is:",
+      "answers": [
+        "Wallet owner",
+        "Transaction verifier",
+        "Token creator",
+        "App developer"
+      ],
+      "solution": 1,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    },
+    {
+      "question": "Main advantage of Algorand over PoW systems?",
+      "answers": [
+        "Higher fees",
+        "Slower transactions",
+        "Energy efficiency and speed",
+        "More forks"
+      ],
+      "solution": 2,
+      "cooldown": 5,
+      "time": 20,
+      "type": "quiz"
+    }
+  ]
+}
