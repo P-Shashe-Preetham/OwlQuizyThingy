@@ -18,7 +18,9 @@ render.env
 
 # Firebase
 firebase-debug.log
+firebase-key.json
 .firebase/
+
 
 # Debug & test files
 testFirebaseBackend.ts

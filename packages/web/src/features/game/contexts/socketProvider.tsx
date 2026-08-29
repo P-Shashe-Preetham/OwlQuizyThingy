@@ -19,6 +19,7 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>
 interface SocketContextValue {
   socket: TypedSocket | null
   isConnected: boolean
+  connectionError: string | null
   clientId: string
   connect: () => void
   disconnect: () => void
@@ -28,6 +29,7 @@ interface SocketContextValue {
 const SocketContext = createContext<SocketContextValue>({
   socket: null,
   isConnected: false,
+  connectionError: null,
   clientId: "",
   connect: () => {},
   disconnect: () => {},
@@ -54,6 +56,7 @@ const getClientId = (): string => {
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<TypedSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
   const [clientId] = useState<string>(() => getClientId())
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         path: "/ws",
         autoConnect: false,
         reconnection: true,
-        reconnectionAttempts: Infinity,
+        reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         auth: {
           clientId,
@@ -80,6 +83,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
       socketClient.on("connect", () => {
         setIsConnected(true)
+        setConnectionError(null)
       })
 
       socketClient.on("disconnect", () => {
@@ -88,9 +92,14 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
       socketClient.on("connect_error", (err) => {
         console.error("Connection error:", err.message)
+        setIsConnected(false)
+        setConnectionError(
+          `Could not connect to WebSocket backend server (${serverUrl}). Ensure @rahoot/socket server is running and VITE_WS_URL is configured.`,
+        )
       })
     } catch (error) {
       console.error("Failed to initialize socket:", error)
+      setConnectionError("Failed to initialize Socket connection.")
     }
 
     // eslint-disable-next-line consistent-return
@@ -101,6 +110,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const connect = useCallback(() => {
     if (socket && !socket.connected) {
+      setConnectionError(null)
       socket.connect()
     }
   }, [socket])
@@ -113,6 +123,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const reconnect = useCallback(() => {
     if (socket) {
+      setConnectionError(null)
       socket.disconnect()
       socket.connect()
     }
@@ -123,6 +134,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         socket,
         isConnected,
+        connectionError,
         clientId,
         connect,
         disconnect,

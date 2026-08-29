@@ -20,10 +20,11 @@ type Props = PropsWithChildren & {
 }
 
 const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
-  const { isConnected } = useSocket()
+  const { isConnected, connectionError, reconnect } = useSocket()
   const { player } = usePlayerStore()
   const { questionStates, setQuestionStates } = useQuestionStore()
   const [isDisabled, setIsDisabled] = useState(false)
+  const [bypassedLoader, setBypassedLoader] = useState(false)
   const next = statusName ? MANAGER_SKIP_BTN[statusName] : null
 
   useEvent("game:updateQuestion", ({ current, total }) => {
@@ -58,10 +59,34 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
       </div>
 
       <div className="z-10 flex flex-1 w-full flex-col justify-between">
-        {!isConnected && !statusName ? (
-          <div className="flex h-full w-full flex-1 flex-col items-center justify-center">
-            <Loader className="h-30" />
-            <h1 className="text-4xl font-bold text-white">Connecting...</h1>
+        {!isConnected && !statusName && !bypassedLoader ? (
+          <div className="flex h-full w-full flex-1 flex-col items-center justify-center p-6 text-center">
+            {connectionError ? (
+              <div className="max-w-md rounded-2xl bg-black/80 p-8 text-white backdrop-blur-md shadow-2xl border border-white/10">
+                <div className="mb-4 text-4xl">🔌</div>
+                <h1 className="mb-2 text-2xl font-bold">Backend Not Connected</h1>
+                <p className="mb-6 text-sm text-gray-300">
+                  The frontend is live, but the real-time WebSocket game server (`@rahoot/socket`) could not be reached.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <Button onClick={() => reconnect()} className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl">
+                    Retry Connection
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setBypassedLoader(true)}
+                    className="text-xs text-gray-400 hover:text-white underline cursor-pointer"
+                  >
+                    Dismiss & View App Interface
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Loader className="h-30 mb-4" />
+                <h1 className="text-3xl font-bold text-white">Connecting to Game Server...</h1>
+              </>
+            )}
           </div>
         ) : (
           <>
