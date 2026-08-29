@@ -21,9 +21,9 @@ const Result = ({
 
   useEffect(() => {
     player.updatePoints(myPoints)
-
     sfxResults()
-  }, [sfxResults])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myPoints, sfxResults])
 
   return (
     <section className="anim-show relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">

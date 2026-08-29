@@ -65,6 +65,12 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
           </div>
         ) : (
           <>
+            {!isConnected && statusName && (
+              <div className="z-50 flex items-center justify-center gap-2 bg-red-500/90 px-4 py-2 text-center text-sm font-bold text-white animate-pulse">
+                ⚠ Connection lost. Reconnecting...
+              </div>
+            )}
+
             <div className="flex w-full justify-between p-4">
               {questionStates && (
                 <div className="shadow-inset flex items-center rounded-md bg-white p-2 px-4 text-lg font-bold text-black">
@@ -86,11 +92,11 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
 
             {children}
 
-            {!manager && (
+            {!manager && player && (
               <div className="z-50 flex items-center justify-between bg-white px-4 py-2 text-lg font-bold text-white">
-                <p className="text-gray-800">{player?.username}</p>
+                <p className="text-gray-800">{player.username}</p>
                 <div className="rounded-sm bg-gray-800 px-3 py-1 text-lg">
-                  {player?.points}
+                  {player.points ?? 0}
                 </div>
               </div>
             )}

@@ -10,13 +10,16 @@ type Props = {
   data: CommonStatusDataMap["SHOW_PREPARED"]
 }
 
-const Prepared = ({ data: { totalAnswers, questionNumber } }: Props) => (
+const Prepared = ({ data: { totalAnswers, questionNumber } }: Props) => {
+  const safeTotal = Math.min(totalAnswers, ANSWERS_ICONS.length)
+  
+  return (
   <section className="anim-show relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">
     <h2 className="anim-show mb-20 text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">
       Question #{questionNumber}
     </h2>
     <div className="anim-quizz grid aspect-square w-60 grid-cols-2 gap-4 rounded-2xl bg-gray-700 p-5 md:w-60">
-      {[...Array(totalAnswers)].map((_, key) => (
+      {[...Array(safeTotal)].map((_, key) => (
         <div
           key={key}
           className={clsx(
@@ -29,6 +32,7 @@ const Prepared = ({ data: { totalAnswers, questionNumber } }: Props) => (
       ))}
     </div>
   </section>
-)
+  )
+}
 
 export default Prepared

@@ -16,13 +16,12 @@ const Username = () => {
   const { gameId, login, setStatus } = usePlayerStore()
   const navigate = useNavigate()
   const [username, setUsername] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleLogin = () => {
-    if (!gameId) {
-      return
-    }
-
-    socket?.emit("player:login", { gameId, data: { username } })
+    if (!gameId || isLoading || !username.trim()) return
+    setIsLoading(true)
+    socket?.emit("player:login", { gameId, data: { username: username.trim() } })
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -31,11 +30,18 @@ const Username = () => {
     }
   }
 
+  const handleBack = () => {
+    window.location.href = "/"
+  }
+
   useEvent("game:successJoin", (gameId) => {
     setStatus(STATUS.WAIT, { text: "Waiting for the players" })
-    login(username)
-
+    login(username.trim())
     navigate(`/party/${gameId}`)
+  })
+
+  useEvent("game:errorMessage", () => {
+    setIsLoading(false)
   })
 
   return (
@@ -44,8 +50,21 @@ const Username = () => {
         onChange={(e) => setUsername(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Username here"
+        maxLength={20}
+        minLength={4}
+        disabled={isLoading}
+        aria-label="Your username"
       />
-      <Button onClick={handleLogin}>Submit</Button>
+      <Button onClick={handleLogin} disabled={isLoading || username.trim().length < 4}>
+        {isLoading ? "Joining..." : "Submit"}
+      </Button>
+      <button
+        onClick={handleBack}
+        className="text-sm text-gray-500 hover:text-gray-800 hover:underline"
+        type="button"
+      >
+        ← Back to PIN entry
+      </button>
     </Form>
   )
 }

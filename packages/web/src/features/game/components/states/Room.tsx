@@ -21,15 +21,15 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
   const [totalPlayers, setTotalPlayers] = useState(0)
 
   useEvent("manager:newPlayer", (player) => {
-    setPlayerList([...playerList, player])
+    setPlayerList((prev) => [...prev, player])
   })
 
   useEvent("manager:removePlayer", (playerId) => {
-    setPlayerList(playerList.filter((p) => p.id !== playerId))
+    setPlayerList((prev) => prev.filter((p) => p.id !== playerId))
   })
 
   useEvent("manager:playerKicked", (playerId) => {
-    setPlayerList(playerList.filter((p) => p.id !== playerId))
+    setPlayerList((prev) => prev.filter((p) => p.id !== playerId))
   })
 
   useEvent("game:totalPlayers", (total) => {
@@ -86,6 +86,8 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
             key={player.id}
             className="shadow-inset bg-primary rounded-md px-4 py-3 font-bold text-white"
             onClick={handleKick(player.id)}
+            role="button"
+            aria-label={`Kick player ${player.username}`}
           >
             <span className="cursor-pointer text-3xl drop-shadow-md hover:line-through">
               {player.username}

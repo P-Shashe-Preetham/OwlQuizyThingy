@@ -121,6 +121,8 @@ class Game {
     this.io.to(target).emit("game:status", statusData)
   }
 
+  private static readonly MAX_PLAYERS = 100
+
   join(socket: Socket, username: string) {
     const isAlreadyConnected = this.players.find(
       (p) => p.clientId === socket.handshake.auth.clientId,
@@ -128,7 +130,11 @@ class Game {
 
     if (isAlreadyConnected) {
       socket.emit("game:errorMessage", "Player already connected")
+      return
+    }
 
+    if (this.players.length >= Game.MAX_PLAYERS) {
+      socket.emit("game:errorMessage", "Game is full. Maximum players reached.")
       return
     }
 
@@ -136,7 +142,16 @@ class Game {
 
     if (result.error) {
       socket.emit("game:errorMessage", result.error.issues[0].message)
+      return
+    }
 
+    // Check for duplicate username (case-insensitive)
+    const isDuplicateName = this.players.some(
+      (p) => p.connected && p.username.toLowerCase() === username.toLowerCase(),
+    )
+
+    if (isDuplicateName) {
+      socket.emit("game:errorMessage", "Username is already taken. Choose a different one.")
       return
     }
 

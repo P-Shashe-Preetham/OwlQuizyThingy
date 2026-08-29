@@ -1,7 +1,36 @@
-/node_modules
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+render.env
+.secrets
+
+# Config (contains passwords)
 /config/*
 !/config/quizz/
-.env
-.secrets
+
+# Firebase
+firebase-debug.log
+.firebase/
+
+# Debug & test files
+testFirebaseBackend.ts
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
 release.json
 web2

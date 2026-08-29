@@ -11,8 +11,11 @@ type Props = {
 
 const ManagerPassword = ({ onSubmit }: Props) => {
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = () => {
+    if (isLoading || !password.trim()) return
+    setIsLoading(true)
     onSubmit(password)
   }
 
@@ -24,6 +27,7 @@ const ManagerPassword = ({ onSubmit }: Props) => {
 
   useEvent("manager:errorMessage", (message) => {
     toast.error(message)
+    setIsLoading(false)
   })
 
   return (
@@ -33,8 +37,11 @@ const ManagerPassword = ({ onSubmit }: Props) => {
         onChange={(e) => setPassword(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Manager password"
+        disabled={isLoading}
       />
-      <Button onClick={handleSubmit}>Submit</Button>
+      <Button onClick={handleSubmit} disabled={isLoading}>
+        {isLoading ? "Verifying..." : "Submit"}
+      </Button>
     </Form>
   )
 }

@@ -9,7 +9,6 @@ export default defineConfig({
     alias: {
       "@rahoot/web": path.resolve(__dirname, "./src"),
       "@rahoot/common": path.resolve(__dirname, "../common/src"),
-      "@rahoot/socket": path.resolve(__dirname, "../socket/src"),
     },
   },
   server: {

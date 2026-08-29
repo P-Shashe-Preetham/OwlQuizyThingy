@@ -33,7 +33,6 @@ const ManagerAuthPage = () => {
     socket?.emit("manager:auth", password)
   }
   const handleCreate = (quizzId: string) => {
-    console.log("quizzId", quizzId)
     socket?.emit("game:create", quizzId)
   }
 

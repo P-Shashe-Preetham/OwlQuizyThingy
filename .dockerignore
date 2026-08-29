@@ -1,3 +1,13 @@
-**/node_modules
-.pnpm-store
+node_modules
 .git
+.github
+.env
+.env.*
+render.env
+firebase-debug.log
+testFirebaseBackend.ts
+.vscode
+.idea
+*.md
+.DS_Store
+Thumbs.db

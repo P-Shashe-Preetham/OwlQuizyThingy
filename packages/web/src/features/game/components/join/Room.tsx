@@ -13,11 +13,14 @@ const Room = () => {
   const { socket, isConnected } = useSocket()
   const { join } = usePlayerStore()
   const [invitation, setInvitation] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const [searchParams] = useSearchParams()
   const hasJoinedRef = useRef(false)
 
   const handleJoin = () => {
-    socket?.emit("player:join", invitation)
+    if (isLoading || !invitation.trim()) return
+    setIsLoading(true)
+    socket?.emit("player:join", invitation.trim())
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -27,7 +30,12 @@ const Room = () => {
   }
 
   useEvent("game:successRoom", (gameId) => {
+    setIsLoading(false)
     join(gameId)
+  })
+
+  useEvent("game:errorMessage", () => {
+    setIsLoading(false)
   })
 
   useEffect(() => {
@@ -47,8 +55,15 @@ const Room = () => {
         onChange={(e) => setInvitation(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="PIN Code here"
+        maxLength={6}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        disabled={isLoading}
+        aria-label="Game PIN code"
       />
-      <Button onClick={handleJoin}>Submit</Button>
+      <Button onClick={handleJoin} disabled={isLoading || !isConnected}>
+        {isLoading ? "Joining..." : "Submit"}
+      </Button>
       <div className="text-center">
         <Link to="/manager" className="text-sm text-gray-500 hover:text-gray-800 hover:underline">
           Host a game

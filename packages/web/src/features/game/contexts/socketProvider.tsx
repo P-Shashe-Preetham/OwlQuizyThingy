@@ -64,7 +64,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     let socketClient: TypedSocket | null = null
 
     try {
-      socketClient = io("/", {
+      const serverUrl = import.meta.env.VITE_WS_URL || "/"
+      socketClient = io(serverUrl, {
         path: "/ws",
         autoConnect: false,
         reconnection: true,
@@ -140,17 +141,28 @@ export const useEvent = <E extends keyof ServerToClientEvents>(
   callback: ServerToClientEvents[E],
 ) => {
   const { socket } = useSocket()
+  const callbackRef = React.useRef(callback)
+
+  // Always keep the ref up to date with latest callback
+  React.useEffect(() => {
+    callbackRef.current = callback
+  })
 
   useEffect(() => {
     if (!socket) {
       return
     }
 
-    socket.on(event, callback as any)
+    // Use a stable wrapper that delegates to the ref
+    const stableCallback = ((...args: any[]) => {
+      ;(callbackRef.current as any)(...args)
+    }) as ServerToClientEvents[E]
+
+    socket.on(event, stableCallback as any)
 
     // eslint-disable-next-line consistent-return
     return () => {
-      socket.off(event, callback as any)
+      socket.off(event, stableCallback as any)
     }
-  }, [socket, event, callback])
+  }, [socket, event])
 }

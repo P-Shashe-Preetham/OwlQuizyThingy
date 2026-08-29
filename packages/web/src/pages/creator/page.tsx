@@ -51,7 +51,10 @@ const CreatorPage = () => {
           setClassicMode(parsed.settings?.classicMode || false)
           setTheme(parsed.settings?.theme || "default")
           setQuestions(parsed.questions)
-        } catch(e) {}
+        } catch(e) {
+          console.warn("Failed to parse draft quiz from localStorage:", e)
+          localStorage.removeItem("draft_quizz")
+        }
       }
     }
   }, [location.state])
@@ -93,7 +96,6 @@ const CreatorPage = () => {
   }
 
   const addQuestion = () => {
-    console.log("Adding question...")
     setQuestions([...questions, {
       type: "quiz",
       question: "New Question",

@@ -3,12 +3,11 @@ import AnswerButton from "@rahoot/web/features/game/components/AnswerButton"
 import {
   ANSWERS_COLORS,
   ANSWERS_ICONS,
-  SFX_ANSWERS_MUSIC,
   SFX_RESULTS_SOUND,
 } from "@rahoot/web/features/game/utils/constants"
 import { calculatePercentages } from "@rahoot/web/features/game/utils/score"
 import clsx from "clsx"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import useSound from "use-sound"
 
 type Props = {
@@ -18,39 +17,15 @@ type Props = {
 const Responses = ({
   data: { type, question, answers, responses, correct },
 }: Props) => {
-  const [percentages, setPercentages] = useState<Record<string, string>>({})
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const percentages = calculatePercentages(responses)
 
   const [sfxResults] = useSound(SFX_RESULTS_SOUND, {
     volume: 0.2,
   })
 
-  const [playMusic, { stop: stopMusic }] = useSound(SFX_ANSWERS_MUSIC, {
-    volume: 0.2,
-    onplay: () => {
-      setIsMusicPlaying(true)
-    },
-    onend: () => {
-      setIsMusicPlaying(false)
-    },
-  })
-
   useEffect(() => {
-    stopMusic()
     sfxResults()
-
-    setPercentages(calculatePercentages(responses))
-  }, [responses, playMusic, stopMusic, sfxResults])
-
-  useEffect(() => {
-    if (!isMusicPlaying) {
-      playMusic()
-    }
-  }, [isMusicPlaying, playMusic])
-
-  useEffect(() => {
-    stopMusic()
-  }, [playMusic, stopMusic])
+  }, []) // Run once on mount only
 
   return (
     <div className="flex h-full flex-1 flex-col justify-between">

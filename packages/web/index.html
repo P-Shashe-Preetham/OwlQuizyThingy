@@ -2,12 +2,38 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OwlQuizThingy</title>
+    
+    <!-- SEO -->
+    <title>OwlQuizThingy — Real-Time Quiz Platform</title>
+    <meta name="description" content="Host interactive real-time quiz games with friends, students, or colleagues. A free, open-source quiz platform." />
+    <meta name="theme-color" content="#ff6b00" />
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="OwlQuizThingy — Real-Time Quiz Platform" />
+    <meta property="og:description" content="Host interactive real-time quiz games with friends, students, or colleagues." />
+    <meta property="og:site_name" content="OwlQuizThingy" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="OwlQuizThingy — Real-Time Quiz Platform" />
+    <meta name="twitter:description" content="Host interactive real-time quiz games with friends, students, or colleagues." />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1a1a2e;color:white;font-family:sans-serif;text-align:center;padding:2rem;">
+        <div>
+          <h1 style="font-size:2rem;margin-bottom:1rem;">OwlQuizThingy</h1>
+          <p style="font-size:1.2rem;color:#aaa;">JavaScript is required to run this application. Please enable JavaScript in your browser settings.</p>
+        </div>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

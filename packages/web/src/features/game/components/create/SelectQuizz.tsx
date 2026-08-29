@@ -47,47 +47,65 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
   return (
     <div className="z-10 flex w-full max-w-md flex-col gap-4 rounded-md bg-white p-4 shadow-sm">
       <div className="flex flex-col items-center justify-center">
-        <h1 className="mb-2 text-2xl font-bold">Select a quizz</h1>
-        <div className="w-full space-y-2">
-          {quizzList.map((quizz) => (
-            <div
-              key={quizz.id}
-              className={clsx(
-                "flex w-full items-center justify-between rounded-md p-3 outline outline-gray-300 transition-colors hover:bg-gray-50 cursor-pointer",
-                selected === quizz.id && "bg-blue-50/50"
-              )}
-              onClick={handleSelect(quizz.id)}
+        <h1 className="mb-2 text-2xl font-bold">Select a quiz</h1>
+        {quizzList.length === 0 ? (
+          <div className="flex w-full flex-col items-center gap-3 rounded-md bg-gray-50 p-6 text-center">
+            <span className="text-4xl">📭</span>
+            <p className="text-gray-600 font-semibold">No quizzes available</p>
+            <p className="text-sm text-gray-400">
+              Create a quiz first using the quiz creator.
+            </p>
+            <button
+              onClick={() => navigate("/creator")}
+              className="mt-2 rounded-md bg-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-300 transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-3">
-                <div
-                  className={clsx(
-                    "h-5 w-5 rounded outline outline-offset-3 outline-gray-300",
-                    selected === quizz.id &&
-                      "bg-primary border-primary/80 shadow-inset",
-                  )}
-                ></div>
-                <span className="font-bold">{quizz.subject}</span>
+              + Create Quiz
+            </button>
+          </div>
+        ) : (
+          <div className="w-full space-y-2">
+            {quizzList.map((quizz) => (
+              <div
+                key={quizz.id}
+                className={clsx(
+                  "flex w-full items-center justify-between rounded-md p-3 outline outline-gray-300 transition-colors hover:bg-gray-50 cursor-pointer",
+                  selected === quizz.id && "bg-blue-50/50"
+                )}
+                onClick={handleSelect(quizz.id)}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={clsx(
+                      "h-5 w-5 rounded outline outline-offset-3 outline-gray-300",
+                      selected === quizz.id &&
+                        "bg-primary border-primary/80 shadow-inset",
+                    )}
+                  ></div>
+                  <span className="font-bold">{quizz.subject}</span>
+                </div>
+                
+                <div className="flex gap-2">
+                  <button 
+                    className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded font-semibold text-gray-700 transition-colors cursor-pointer"
+                    onClick={(e) => handleEdit(quizz, e)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded font-semibold text-red-600 transition-colors cursor-pointer"
+                    onClick={(e) => handleDelete(quizz.id, e)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              
-              <div className="flex gap-2">
-                <button 
-                  className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded font-semibold text-gray-700 transition-colors cursor-pointer"
-                  onClick={(e) => handleEdit(quizz, e)}
-                >
-                  Edit
-                </button>
-                <button 
-                  className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded font-semibold text-red-600 transition-colors cursor-pointer"
-                  onClick={(e) => handleDelete(quizz.id, e)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-      <Button onClick={handleSubmit}>Submit</Button>
+      {quizzList.length > 0 && (
+        <Button onClick={handleSubmit}>Submit</Button>
+      )}
     </div>
   )
 }
