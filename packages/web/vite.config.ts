@@ -11,6 +11,9 @@ export default defineConfig({
       "@rahoot/common": path.resolve(__dirname, "../common/src"),
     },
   },
+  test: {
+    exclude: ["**/node_modules/**", "**/dist/**", "**/cypress/**", "**/.{idea,git,cache,output,temp}/**", "**/tests/**"],
+  },
   server: {
     port: 3000,
     host: "0.0.0.0",

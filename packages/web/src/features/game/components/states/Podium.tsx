@@ -12,8 +12,8 @@ import ReactConfetti from "react-confetti"
 import useSound from "use-sound"
 
 type Props = {
-  data: ManagerStatusDataMap["FINISHED"]
-}
+  data: ManagerStatusDataMap["FINISHED"];
+};
 
 const usePodiumAnimation = (topLength: number) => {
   const [apparition, setApparition] = useState(0)
@@ -61,6 +61,38 @@ const usePodiumAnimation = (topLength: number) => {
   return apparition
 }
 
+const getRowStyles = (i: number) => {
+  if (i === 0) {
+    return "bg-amber-500/20 border-amber-500/50 text-amber-100"
+  }
+
+  if (i === 1) {
+    return "bg-zinc-500/20 border-zinc-500/50 text-zinc-100"
+  }
+
+  if (i === 2) {
+    return "bg-amber-800/20 border-amber-800/50 text-amber-200"
+  }
+
+  return "bg-white/5 text-white"
+}
+
+const getBadgeStyles = (i: number) => {
+  if (i === 0) {
+    return "bg-amber-500 text-amber-950"
+  }
+
+  if (i === 1) {
+    return "bg-zinc-400 text-zinc-950"
+  }
+
+  if (i === 2) {
+    return "bg-amber-700 text-amber-950"
+  }
+
+  return "bg-white/20"
+}
+
 const Podium = ({ data: { subject, top } }: Props) => {
   const apparition = usePodiumAnimation(top.length)
 
@@ -81,10 +113,50 @@ const Podium = ({ data: { subject, top } }: Props) => {
           <div className="spotlight"></div>
         </div>
       )}
-      <section className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-between">
-        <h2 className="anim-show text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl">
+
+      <section className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-between z-40 pb-10">
+        <h2 className="anim-show text-center text-3xl font-bold text-white drop-shadow-lg md:text-4xl lg:text-5xl mt-10">
           {subject}
         </h2>
+
+        {apparition >= 4 && (
+          <div className="anim-show w-full max-w-3xl bg-slate-900/80 backdrop-blur-md rounded-2xl p-8 border border-white/10 mt-10 shadow-2xl">
+            <h3 className="text-2xl font-bold text-white mb-6 text-center border-b border-white/10 pb-4">
+              Final Results
+            </h3>
+            <div className="flex flex-col gap-3 max-h-[40vh] overflow-y-auto pr-2">
+              {top.map((p, i) => (
+                <div
+                  key={p.id}
+                  className={clsx(
+                    "flex items-center justify-between p-4 rounded-xl border border-white/5",
+                    getRowStyles(i),
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={clsx(
+                        "w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm",
+                        getBadgeStyles(i),
+                      )}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="font-bold text-xl">{p.username}</span>
+                  </div>
+                  <span className="font-black text-2xl font-mono">
+                    {p.points}
+                  </span>
+                </div>
+              ))}
+              {top.length === 0 && (
+                <p className="text-center text-white/50 py-10 font-bold">
+                  No players participated
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div
           style={{ gridTemplateColumns: `repeat(${top.length}, 1fr)` }}

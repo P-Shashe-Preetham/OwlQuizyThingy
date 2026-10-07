@@ -6,13 +6,16 @@ import Rhombus from "@rahoot/web/features/game/components/icons/Rhombus"
 import Circle from "@rahoot/web/features/game/components/icons/Circle"
 import Square from "@rahoot/web/features/game/components/icons/Square"
 import { ANSWERS_COLORS } from "@rahoot/web/features/game/utils/constants"
-import { useSocket, useEvent } from "@rahoot/web/features/game/contexts/socketProvider"
+import {
+  useSocket,
+  useEvent,
+} from "@rahoot/web/features/game/contexts/socketProvider"
 import toast from "react-hot-toast"
 import clsx from "clsx"
 
 const Icons = [Triangle, Rhombus, Circle, Square]
 
-type PartialQuestion = Quizz["questions"][number]
+type PartialQuestion = Quizz["questions"][number];
 
 const CreatorPage = () => {
   const { socket } = useSocket()
@@ -43,10 +46,15 @@ const CreatorPage = () => {
       setClassicMode(q.settings?.classicMode || false)
       setTheme(q.settings?.theme || "default")
       setQuestions(
-        q.questions.map((question) => ({ ...question, type: question.type || "quiz" })),
+        q.questions.map((question) => ({
+          ...question,
+          type: question.type || "quiz",
+        })),
       )
     } else {
-      const draft = localStorage.getItem("draft_quizz")
+      const draft = localStorage.getItem(
+        `draft_quizz_${location.state?.quizz?.id || "new"}`,
+      )
 
       if (draft) {
         try {
@@ -57,7 +65,6 @@ const CreatorPage = () => {
           setQuestions(parsed.questions)
         } catch (e) {
           console.warn("Failed to parse draft quiz from localStorage:", e)
-          localStorage.removeItem("draft_quizz")
         }
       }
     }
@@ -66,7 +73,7 @@ const CreatorPage = () => {
   useEffect(() => {
     if (!isSaving) {
       localStorage.setItem(
-        "draft_quizz",
+        `draft_quizz_${id || "new"}`,
         JSON.stringify({
           subject,
           settings: { classicMode, theme },
@@ -78,7 +85,7 @@ const CreatorPage = () => {
 
   useEvent("manager:quizzSaved", ({ id: savedId, subject }) => {
     setIsSaving(false)
-    localStorage.removeItem("draft_quizz")
+    localStorage.removeItem(`draft_quizz_${id || "new"}`)
     toast.success(`Quiz "${subject}" saved successfully!`)
 
     if (savedId) {
@@ -148,6 +155,32 @@ const CreatorPage = () => {
 
   const currentQ = questions[selectedIdx] || questions[0]
 
+  const moveQuestionUp = (idx: number) => {
+    if (idx === 0) {
+      return
+    }
+
+    const newQuestions = [...questions]
+    const temp = newQuestions[idx]
+    newQuestions[idx] = newQuestions[idx - 1]
+    newQuestions[idx - 1] = temp
+    setQuestions(newQuestions)
+    setSelectedIdx(idx - 1)
+  }
+
+  const moveQuestionDown = (idx: number) => {
+    if (idx === questions.length - 1) {
+      return
+    }
+
+    const newQuestions = [...questions]
+    const temp = newQuestions[idx]
+    newQuestions[idx] = newQuestions[idx + 1]
+    newQuestions[idx + 1] = temp
+    setQuestions(newQuestions)
+    setSelectedIdx(idx + 1)
+  }
+
   const updateQuestion = (data: Partial<PartialQuestion>) => {
     const updated = [...questions]
     updated[selectedIdx] = { ...updated[selectedIdx], ...data }
@@ -191,6 +224,30 @@ const CreatorPage = () => {
                 }
               }}
             >
+              <div className="flex flex-col gap-1 mr-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    moveQuestionUp(idx)
+                  }}
+                  disabled={idx === 0}
+                  className="px-1 py-0 hover:bg-white/20 rounded disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    moveQuestionDown(idx)
+                  }}
+                  disabled={idx === questions.length - 1}
+                  className="px-1 py-0 hover:bg-white/20 rounded disabled:opacity-30 disabled:cursor-not-allowed text-xs"
+                >
+                  ↓
+                </button>
+              </div>
               <div className="flex items-center gap-3 overflow-hidden">
                 <span
                   className={clsx(
@@ -308,7 +365,9 @@ const CreatorPage = () => {
                     value={currentQ.type || "quiz"}
                     onChange={(e) => {
                       const newType = e.target.value as any
-                      const update: Partial<PartialQuestion> = { type: newType }
+                      const update: Partial<PartialQuestion> = {
+                        type: newType,
+                      }
 
                       if (
                         newType === "type-answer" &&
@@ -420,15 +479,15 @@ const CreatorPage = () => {
                     aria-label={`Answer option ${i + 1}`}
                   />
                   <div className="absolute right-6 opacity-40 pointer-events-none group-focus-within:opacity-100 transition-opacity">
-                    {Icons[i] && currentQ.type !== "type-answer" && (
+                    {Icons[i] &&
+                      currentQ.type !== "type-answer" &&
                       (() => {
                         const Icon = Icons[i]
 
                         return (
                           <Icon className="w-8 h-8 text-white fill-current" />
                         )
-                      })()
-                    )}
+                      })()}
                   </div>
                 </div>
               ))}

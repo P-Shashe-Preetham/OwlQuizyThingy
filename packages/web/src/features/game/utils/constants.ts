@@ -64,6 +64,7 @@ export const SFX_SNEAR_ROOL = "/sounds/snearRoll.mp3"
 
 export const MANAGER_SKIP_EVENTS = {
   [STATUS.SHOW_ROOM]: "manager:startGame",
+  [STATUS.SHOW_QUESTION]: "manager:abortQuiz",
   [STATUS.SELECT_ANSWER]: "manager:abortQuiz",
   [STATUS.SHOW_RESPONSES]: "manager:showLeaderboard",
   [STATUS.SHOW_LEADERBOARD]: "manager:nextQuestion",
@@ -82,8 +83,8 @@ export const MANAGER_SKIP_BTN = {
   [STATUS.SHOW_ROOM]: "Start Game",
   [STATUS.SHOW_START]: null,
   [STATUS.SHOW_PREPARED]: null,
-  [STATUS.SHOW_QUESTION]: null,
-  [STATUS.SELECT_ANSWER]: "Skip",
+  [STATUS.SHOW_QUESTION]: "End Countdown",
+  [STATUS.SELECT_ANSWER]: "Skip Timer",
   [STATUS.SHOW_RESULT]: null,
   [STATUS.SHOW_RESPONSES]: "Next",
   [STATUS.SHOW_LEADERBOARD]: "Next",
