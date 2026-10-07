@@ -36,6 +36,13 @@ const ManagerProtectedRoute = () => {
     setIsAuthenticated(true)
   })
 
+  useEvent("manager:errorMessage", (message) => {
+    if (message === "Unauthorized") {
+      sessionStorage.removeItem("manager_authenticated")
+      setIsAuthenticated(false)
+    }
+  })
+
   if (isAuthenticated === null) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-950 text-white font-bold">
