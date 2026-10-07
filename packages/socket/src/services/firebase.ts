@@ -1,6 +1,23 @@
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
+import { quizzSchema } from "@rahoot/common/validators/game"
 import admin from "firebase-admin"
 import { v4 as uuid } from "uuid"
+
+// Converter to provide type safety for Firestore reads/writes
+const quizzConverter: admin.firestore.FirestoreDataConverter<Quizz> = {
+  toFirestore(quizz: Quizz): admin.firestore.DocumentData {
+    return {
+      ...quizz,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+  },
+  fromFirestore(snapshot: admin.firestore.QueryDocumentSnapshot): Quizz {
+    const data = snapshot.data()
+
+    // We'll validate schema separately to handle malformed data
+    return data as Quizz
+  },
+}
 
 class FirebaseService {
   private static instance: FirebaseService
@@ -35,7 +52,7 @@ class FirebaseService {
         return
       }
 
-      let serviceAccount: any = null
+      let serviceAccount: unknown = null
 
       try {
         // Try to parse as direct JSON first
@@ -57,7 +74,7 @@ class FirebaseService {
       }
 
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
       })
 
       this.db = admin.firestore()
@@ -78,19 +95,30 @@ class FirebaseService {
     }
 
     try {
-      const snapshot = await this.db.collection("quizzes").get()
+      const snapshot = await this.db.collection("quizzes").withConverter(quizzConverter).get()
+      const quizzes: QuizzWithId[] = []
 
-      return snapshot.docs.map((doc) => {
+      for (const doc of snapshot.docs) {
         const data = doc.data()
 
-        // Ensure internal data cannot overwrite canonical doc.id
-        return {
-          ...data,
-          id: doc.id,
-        } as QuizzWithId
-      })
-    } catch (error) {
-      console.error("Error fetching quizzes:", error)
+        // Validate against our Zod schema
+        const validationResult = quizzSchema.safeParse(data)
+
+        if (validationResult.success) {
+          quizzes.push({
+            ...validationResult.data,
+            id: doc.id,
+          })
+        } else {
+          console.error(`⚠️ Malformed quiz document in Firestore skipped: ${doc.id}. Issues:`, validationResult.error.format())
+        }
+      }
+
+      return quizzes
+    } catch (error: any) {
+      console.error("Error fetching quizzes from Firestore:", error.message || error)
+      // We don't throw here to prevent the whole app from crashing if read fails,
+      // but in a strict production environment, we might bubble this up.
 
       return []
     }
@@ -101,38 +129,47 @@ class FirebaseService {
       throw new Error("Firebase not initialized")
     }
 
-    try {
-      const quizzId = id || (quizz as any)?.id || uuid()
+    // Validate the quiz before saving
+    const validationResult = quizzSchema.safeParse(quizz)
 
-      const quizzData = { ...quizz } as any
-      delete quizzData.id
+    if (!validationResult.success) {
+        throw new Error(`Invalid quiz schema: ${validationResult.error.issues[0].message}`)
+    }
+
+    try {
+      const quizzId = id || uuid()
 
       await this.db
         .collection("quizzes")
+        .withConverter(quizzConverter)
         .doc(quizzId)
-        .set(
-          {
-            ...quizzData,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true },
-        )
+        .set(quizz, { merge: true })
 
       console.log(`Saved quiz: ${quizz.subject} (${quizzId})`)
 
       return quizzId
-    } catch (error) {
-      console.error("Error saving quiz:", error)
-      throw error
+    } catch (error: any) {
+      console.error("Error saving quiz to Firestore:", error.message || error)
+      throw new Error("Failed to save quiz to Firestore")
     }
   }
 
   async deleteQuizz(id: string): Promise<void> {
     if (!this.db) {
-      return
+      throw new Error("Firebase not initialized")
     }
 
-    await this.db.collection("quizzes").doc(id).delete()
+    if (!id || typeof id !== "string") {
+        throw new Error("Invalid quiz ID for deletion")
+    }
+
+    try {
+        await this.db.collection("quizzes").doc(id).delete()
+        console.log(`Deleted quiz: ${id}`)
+    } catch (error: any) {
+        console.error("Error deleting quiz from Firestore:", error.message || error)
+        throw new Error("Failed to delete quiz from Firestore")
+    }
   }
 }
 
