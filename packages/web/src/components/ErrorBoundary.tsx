@@ -15,6 +15,7 @@ class ErrorBoundary extends Component<PropsWithChildren, ErrorBoundaryState> {
     return { hasError: true, error }
   }
 
+  // eslint-disable-next-line class-methods-use-this
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo)
   }
@@ -27,7 +28,7 @@ class ErrorBoundary extends Component<PropsWithChildren, ErrorBoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-center">
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-linear-to-br from-gray-900 to-gray-800 p-6 text-center">
           <div className="mb-6 text-6xl">😵</div>
           <h1 className="mb-3 text-3xl font-bold text-white">
             Something went wrong

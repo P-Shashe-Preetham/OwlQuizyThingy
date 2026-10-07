@@ -12,7 +12,7 @@ import clsx from "clsx"
 
 const Icons = [Triangle, Rhombus, Circle, Square]
 
-type PartialQuestion = Quizz['questions'][number]
+type PartialQuestion = Quizz["questions"][number]
 
 const CreatorPage = () => {
   const { socket } = useSocket()
@@ -44,6 +44,7 @@ const CreatorPage = () => {
       setQuestions(q.questions.map(question => ({...question, type: question.type || "quiz"})))
     } else {
       const draft = localStorage.getItem("draft_quizz")
+
       if (draft) {
         try {
           const parsed = JSON.parse(draft)
@@ -76,7 +77,7 @@ const CreatorPage = () => {
   })
 
   const handleSave = () => {
-    if (!socket) return
+    if (!socket) {return}
     
     const quizData: Quizz & { id?: string } = {
       ...(id ? { id } : {}),
@@ -87,7 +88,8 @@ const CreatorPage = () => {
       },
       questions: questions.map(q => ({
         ...q,
-        answers: q.answers.filter(a => a.trim() !== "") // Clean empty answers
+        // Clean empty answers
+        answers: q.answers.filter(a => a.trim() !== "")
       }))
     }
 
@@ -108,7 +110,8 @@ const CreatorPage = () => {
   }
 
   const removeQuestion = (idx: number) => {
-    if (questions.length <= 1) return
+    if (questions.length <= 1) {return}
+
     const newQuestions = questions.filter((_, i) => i !== idx)
     setQuestions(newQuestions)
     setSelectedIdx(Math.max(0, idx - 1))
@@ -130,7 +133,7 @@ const CreatorPage = () => {
           <button onClick={() => navigate("/")} className="text-xl font-black italic hover:text-primary transition-colors">
             OwlQuizThingy
           </button>
-          <div className="h-6 w-[2px] bg-white/10" />
+          <div className="h-6 w-0.5 bg-white/10" />
           <input 
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
@@ -210,7 +213,7 @@ const CreatorPage = () => {
                 <span className="text-xs font-bold text-slate-400 italic">#Q{i + 1}</span>
                 {questions.length > 1 && (
                   <button 
-                    onClick={(e) => { e.stopPropagation(); removeQuestion(i); }}
+                    onClick={(e) => { e.stopPropagation(); removeQuestion(i) }}
                     className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity p-1"
                   >
                     ×
@@ -236,7 +239,7 @@ const CreatorPage = () => {
               <textarea 
                 value={currentQ.question}
                 onChange={(e) => updateQuestion({ question: e.target.value })}
-                className="w-full text-center text-4xl font-bold bg-white/5 border-2 border-transparent focus:border-primary/50 rounded-3xl p-10 focus:outline-none transition-all min-h-[160px] resize-none leading-relaxed placeholder:text-white/10 shadow-2xl"
+                className="w-full text-center text-4xl font-bold bg-white/5 border-2 border-transparent focus:border-primary/50 rounded-3xl p-10 focus:outline-none transition-all min-h-40 resize-none leading-relaxed placeholder:text-white/10 shadow-2xl"
                 placeholder="Start typing your question..."
               />
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 px-6 py-1 text-sm font-bold text-slate-500 uppercase tracking-tighter rounded-full border border-white/10 group-focus-within:text-primary transition-colors">Question Text</div>
@@ -263,13 +266,17 @@ const CreatorPage = () => {
                       onChange={(e) => {
                         const newType = e.target.value as any
                         const update: Partial<PartialQuestion> = { type: newType }
+
                         if (newType === "type-answer" && currentQ.answers.length > 1) {
                           update.answers = [currentQ.answers[0]]
                         } else if (newType === "quiz" && currentQ.answers.length < 4) {
                           const newAns = [...currentQ.answers]
-                          while (newAns.length < 4) newAns.push(`Option ${newAns.length + 1}`)
+
+                          while (newAns.length < 4) {newAns.push(`Option ${newAns.length + 1}`)}
+
                           update.answers = newAns
                         }
+
                         updateQuestion(update)
                       }}
                       className="bg-slate-900 px-6 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-primary font-bold transition-all w-full text-center text-sm cursor-pointer relative z-30"
@@ -309,11 +316,13 @@ const CreatorPage = () => {
                         onChange={(e) => {
                           const count = Math.max(1, Number(e.target.value))
                           const newAns = [...currentQ.answers]
+
                           if (count > newAns.length) {
-                            while (newAns.length < count) newAns.push("")
+                            while (newAns.length < count) {newAns.push("")}
                           } else {
                             newAns.length = count
                           }
+
                           updateQuestion({ answers: newAns })
                         }}
                         className="bg-slate-900 px-6 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-primary font-bold transition-all w-full text-center text-xl cursor-pointer relative z-30"
@@ -365,7 +374,9 @@ const CreatorPage = () => {
                     {Icons[i] && currentQ.type !== "type-answer" && (
                         (() => {
                             const Icon = Icons[i]
-                            return <Icon className="w-8 h-8 text-white fill-current" />
+
+                            
+return <Icon className="w-8 h-8 text-white fill-current" />
                         })()
                     )}
                   </div>

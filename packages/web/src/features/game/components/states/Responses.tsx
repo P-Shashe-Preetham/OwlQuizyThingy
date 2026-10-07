@@ -23,9 +23,10 @@ const Responses = ({
     volume: 0.2,
   })
 
+  // Run once on mount only
   useEffect(() => {
     sfxResults()
-  }, []) // Run once on mount only
+  }, [])
 
   return (
     <div className="flex h-full flex-1 flex-col justify-between">
@@ -35,11 +36,11 @@ const Responses = ({
         </h2>
 
         {type === "type-answer" ? (
-          <div className="mt-8 flex flex-wrap justify-center gap-4 w-full max-w-4xl px-4 max-h-[300px] overflow-y-auto">
+          <div className="mt-8 flex flex-wrap justify-center gap-4 w-full max-w-4xl px-4 max-h-75 overflow-y-auto">
             {Object.entries(responses).map(([responseStr, count], i) => {
               const isCorrectText = Array.isArray(correct) 
                 ? correct.some((a) => a.trim().toLowerCase() === String(responseStr).trim().toLowerCase()) 
-                : false;
+                : false
               
               return (
                 <div key={i} className={clsx(
@@ -47,7 +48,7 @@ const Responses = ({
                   isCorrectText ? "border-green-500 text-green-400" : "border-red-500/50 text-white"
                 )}>
                   <span>{responseStr}</span>
-                  <div className="w-[2px] h-6 bg-white/20" />
+                  <div className="w-0.5 h-6 bg-white/20" />
                   <span className="text-white bg-black/30 px-3 py-1 rounded-lg text-sm">{count as number}</span>
                 </div>
               )

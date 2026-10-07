@@ -18,7 +18,8 @@ const Room = () => {
   const hasJoinedRef = useRef(false)
 
   const handleJoin = () => {
-    if (isLoading || !invitation.trim()) return
+    if (isLoading || !invitation.trim()) {return}
+
     setIsLoading(true)
     socket?.emit("player:join", invitation.trim())
   }

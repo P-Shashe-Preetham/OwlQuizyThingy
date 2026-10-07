@@ -12,7 +12,7 @@ import {
   SFX_ANSWERS_SOUND,
 } from "@rahoot/web/features/game/utils/constants"
 import clsx from "clsx"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useParams } from "react-router"
 import useSound from "use-sound"
 
@@ -56,9 +56,10 @@ const Answers = ({
     sfxPop()
   }
 
-  const handleTextSubmit = (e: React.FormEvent) => {
+  const handleTextSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!player || hasSubmitted || !typedAnswer.trim()) return
+
+    if (!player || hasSubmitted || !typedAnswer.trim()) {return}
 
     socket?.emit("player:selectedAnswer", {
       gameId,
@@ -66,6 +67,47 @@ const Answers = ({
     })
     setHasSubmitted(true)
     sfxPop()
+  }
+
+  const renderTypeAnswerContent = () => {
+    if (!player) {
+      return (
+        <h3 className="text-2xl font-bold text-white/50 text-center animate-pulse">
+          Players are typing their answers...
+        </h3>
+      )
+    }
+
+    if (hasSubmitted) {
+      return (
+        <h3 className="text-2xl font-bold text-white text-center">
+          Answer submitted! Waiting for others...
+        </h3>
+      )
+    }
+
+    return (
+      <form
+        onSubmit={handleTextSubmit}
+        className="flex w-full max-w-lg flex-col gap-4 bg-white/10 p-6 rounded-2xl border border-white/20 shadow-xl"
+      >
+        <label className="text-white text-lg font-bold text-center">Type your answer</label>
+        <input
+          type="text"
+          value={typedAnswer}
+          onChange={(e) => setTypedAnswer(e.target.value)}
+          className="w-full rounded-xl p-4 text-2xl font-bold text-black focus:outline-none focus:ring-4 focus:ring-primary/50 text-center"
+          placeholder="Enter your answer..."
+          autoFocus
+        />
+        <button
+          type="submit"
+          className="w-full rounded-xl bg-primary py-4 text-xl font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 shadow-lg"
+        >
+          Submit
+        </button>
+      </form>
+    )
   }
 
   useEffect(() => {
@@ -142,34 +184,7 @@ const Answers = ({
 
         {type === "type-answer" ? (
           <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center px-4">
-            {player ? (
-              hasSubmitted ? (
-                <h3 className="text-2xl font-bold text-white text-center">Answer submitted! Waiting for others...</h3>
-              ) : (
-                <form 
-                  onSubmit={handleTextSubmit} 
-                  className="flex w-full max-w-lg flex-col gap-4 bg-white/10 p-6 rounded-2xl border border-white/20 shadow-xl"
-                >
-                  <label className="text-white text-lg font-bold text-center">Type your answer</label>
-                  <input
-                    type="text"
-                    value={typedAnswer}
-                    onChange={(e) => setTypedAnswer(e.target.value)}
-                    className="w-full rounded-xl p-4 text-2xl font-bold text-black focus:outline-none focus:ring-4 focus:ring-primary/50 text-center"
-                    placeholder="Enter your answer..."
-                    autoFocus
-                  />
-                  <button 
-                    type="submit" 
-                    className="w-full rounded-xl bg-primary py-4 text-xl font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 shadow-lg"
-                  >
-                    Submit
-                  </button>
-                </form>
-              )
-            ) : (
-              <h3 className="text-2xl font-bold text-white/50 text-center animate-pulse">Players are typing their answers...</h3>
-            )}
+            {renderTypeAnswerContent()}
           </div>
         ) : (
           <div

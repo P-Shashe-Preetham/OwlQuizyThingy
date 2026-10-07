@@ -27,7 +27,6 @@ export const withGame = (
 
 export const createInviteCode = (length = 6): string => {
   const characters = "0123456789"
-  const Registry = require("@rahoot/socket/services/registry").default
   const registry = Registry.getInstance()
   
   let result = ""

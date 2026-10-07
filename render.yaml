@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: owl-quizy-socket
+    runtime: node
+    buildCommand: pnpm install && pnpm -r run build
+    startCommand: node packages/socket/dist/index.cjs
+    envVars:
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: MANAGER_PASSWORD
+        value: admin123
+      - key: CORS_ORIGIN
+        value: "*"

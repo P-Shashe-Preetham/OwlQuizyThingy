@@ -1,5 +1,4 @@
 import js from "@eslint/js"
-import nextPlugin from "@next/eslint-plugin-next"
 import reactPlugin from "eslint-plugin-react"
 import reactHooksPlugin from "eslint-plugin-react-hooks"
 import { defineConfig } from "eslint/config"
@@ -8,7 +7,7 @@ import tseslint from "typescript-eslint"
 
 export default defineConfig([
   {
-    ignores: ["**/node_modules/**", "**/.next/**"],
+    ignores: ["**/node_modules/**", "**/dist/**"],
   },
   {
     files: ["**/*.{ts,tsx}"],
@@ -29,7 +28,6 @@ export default defineConfig([
       "@typescript-eslint": tseslint.plugin,
       react: reactPlugin,
       "react-hooks": reactHooksPlugin,
-      "@next/next": nextPlugin,
     },
     settings: {
       react: {

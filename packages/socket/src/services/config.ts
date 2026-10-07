@@ -79,6 +79,7 @@ class Config {
     let configObj: any = {}
 
     const isExists = fs.existsSync(getPath("game.json"))
+
     if (isExists) {
       try {
         const config = fs.readFileSync(getPath("game.json"), "utf-8")
@@ -87,14 +88,14 @@ class Config {
         console.error("Failed to read game config:", error)
       }
     } else {
-        console.error("Game config not found, falling back to defaults")
+      console.error("Game config not found, falling back to defaults")
     }
 
     if (process.env.MANAGER_PASSWORD) {
-        configObj.managerPassword = process.env.MANAGER_PASSWORD
-    } else if (!configObj.managerPassword) {
-        configObj.managerPassword = "PASSWORD"
+      configObj.managerPassword = process.env.MANAGER_PASSWORD
     }
+
+    configObj.managerPassword ||= "PASSWORD"
 
     return configObj
   }

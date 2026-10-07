@@ -1,17 +1,16 @@
-import { Server } from "@rahoot/common/types/game/socket"
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
+import { Server } from "@rahoot/common/types/game/socket"
 import { inviteCodeValidator } from "@rahoot/common/validators/auth"
 import Config from "@rahoot/socket/services/config"
 import FirebaseService from "@rahoot/socket/services/firebase"
 import Game from "@rahoot/socket/services/game"
 import Registry from "@rahoot/socket/services/registry"
 import { withGame } from "@rahoot/socket/utils/game"
-import { Server as ServerIO } from "socket.io"
 import http from "http"
+import { Server as ServerIO } from "socket.io"
 
 const WS_PORT = 3001
 const MAX_GAMES = 50
-const MAX_PLAYERS_PER_GAME = 100
 const AUTH_RATE_LIMIT_WINDOW_MS = 60_000
 const AUTH_MAX_ATTEMPTS = 5
 
@@ -24,14 +23,18 @@ const authenticatedManagers = new Set<string>()
 const httpServer = http.createServer((req, res) => {
   if (req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" })
-    res.end(JSON.stringify({
-      status: "ok",
-      games: registry.getGameCount(),
-      emptyGames: registry.getEmptyGameCount(),
-      uptime: process.uptime(),
-    }))
+    res.end(
+      JSON.stringify({
+        status: "ok",
+        games: registry.getGameCount(),
+        emptyGames: registry.getEmptyGameCount(),
+        uptime: process.uptime(),
+      }),
+    )
+
     return
   }
+
   res.writeHead(404)
   res.end()
 })
@@ -45,6 +48,7 @@ const io: Server = new ServerIO(httpServer, {
   pingInterval: 15000,
   pingTimeout: 10000,
 })
+
 Config.init()
 
 const registry = Registry.getInstance()
@@ -63,11 +67,16 @@ function isRateLimited(ip: string): boolean {
   const entry = authAttempts.get(ip)
 
   if (!entry || now > entry.resetAt) {
-    authAttempts.set(ip, { count: 1, resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS })
+    authAttempts.set(ip, {
+      count: 1,
+      resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS,
+    })
+
     return false
   }
 
   entry.count += 1
+
   return entry.count > AUTH_MAX_ATTEMPTS
 }
 
@@ -81,6 +90,7 @@ async function getCombinedQuizList(): Promise<QuizzWithId[]> {
   }
 
   const firebaseIds = new Set(firebaseQuizzes.map((q) => q.id))
+
   return [
     ...firebaseQuizzes,
     ...localQuizzes.filter((q) => !firebaseIds.has(q.id)),
@@ -93,7 +103,10 @@ io.on("connection", (socket) => {
   )
 
   socket.on("player:reconnect", ({ gameId }) => {
-    const game = registry.getPlayerGame(gameId, socket.handshake.auth.clientId)
+    const game = registry.getPlayerGame(
+      gameId,
+      socket.handshake.auth.clientId,
+    )
 
     if (game) {
       game.reconnect(socket)
@@ -105,7 +118,10 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:reconnect", ({ gameId }) => {
-    const game = registry.getManagerGame(gameId, socket.handshake.auth.clientId)
+    const game = registry.getManagerGame(
+      gameId,
+      socket.handshake.auth.clientId,
+    )
 
     if (game) {
       game.reconnect(socket)
@@ -120,20 +136,30 @@ io.on("connection", (socket) => {
     try {
       // Rate limiting
       const ip = socket.handshake.address
+
       if (isRateLimited(ip)) {
-        socket.emit("manager:errorMessage", "Too many attempts. Please try again later.")
+        socket.emit(
+          "manager:errorMessage",
+          "Too many attempts. Please try again later.",
+        )
+
         return
       }
 
       const config = Config.game()
 
       if (config.managerPassword === "PASSWORD") {
-        socket.emit("manager:errorMessage", "Manager password is not configured")
+        socket.emit(
+          "manager:errorMessage",
+          "Manager password is not configured",
+        )
+
         return
       }
 
       if (password !== config.managerPassword) {
         socket.emit("manager:errorMessage", "Invalid password")
+
         return
       }
 
@@ -141,6 +167,7 @@ io.on("connection", (socket) => {
       authenticatedManagers.add(socket.id)
 
       const combinedQuizzList = await getCombinedQuizList()
+
       socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
       console.error("Failed to read game config:", error)
@@ -151,15 +178,20 @@ io.on("connection", (socket) => {
   socket.on("manager:saveQuizz", async (quizz) => {
     if (!isAuthenticatedManager(socket.id)) {
       socket.emit("manager:errorMessage", "Unauthorized")
+
       return
     }
 
     try {
       if (FirebaseService.isInitialized()) {
         const id = await FirebaseService.saveQuizz(quizz)
+
         socket.emit("manager:quizzSaved", { id, subject: quizz.subject })
       } else {
-        socket.emit("manager:errorMessage", "Firebase not configured. Quiz not saved.")
+        socket.emit(
+          "manager:errorMessage",
+          "Firebase not configured. Quiz not saved.",
+        )
       }
     } catch (error) {
       console.error("Failed to save quiz:", error)
@@ -170,6 +202,7 @@ io.on("connection", (socket) => {
   socket.on("manager:deleteQuizz", async (id) => {
     if (!isAuthenticatedManager(socket.id)) {
       socket.emit("manager:errorMessage", "Unauthorized")
+
       return
     }
 
@@ -177,8 +210,10 @@ io.on("connection", (socket) => {
       if (FirebaseService.isInitialized()) {
         await FirebaseService.deleteQuizz(id)
       }
+
       // Return combined list (Firebase + local) — not just Firebase
       const combinedQuizzList = await getCombinedQuizList()
+
       socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
       console.error("Failed to delete quiz:", error)
@@ -188,33 +223,45 @@ io.on("connection", (socket) => {
 
   socket.on("game:create", async (quizzId) => {
     if (!isAuthenticatedManager(socket.id)) {
-      socket.emit("game:errorMessage", "Unauthorized. Please authenticate first.")
+      socket.emit(
+        "game:errorMessage",
+        "Unauthorized. Please authenticate first.",
+      )
+
       return
     }
 
     if (registry.getGameCount() >= MAX_GAMES) {
-      socket.emit("game:errorMessage", "Server is at capacity. Please try again later.")
+      socket.emit(
+        "game:errorMessage",
+        "Server is at capacity. Please try again later.",
+      )
+
       return
     }
 
     let quizz: Quizz | null = null
-    
+
     if (FirebaseService.isInitialized()) {
       const quizzes = await FirebaseService.getQuizzes()
-      quizz = quizzes.find(q => q.id === quizzId) ?? null
+
+      quizz = quizzes.find((q) => q.id === quizzId) ?? null
     }
-    
+
     if (!quizz) {
       const quizzList = Config.quizz()
+
       quizz = quizzList.find((q) => q.id === quizzId) ?? null
     }
 
     if (!quizz) {
       socket.emit("game:errorMessage", "Quiz not found")
+
       return
     }
 
     const game = new Game(io, socket, quizz)
+
     registry.addGame(game)
   })
 
@@ -282,6 +329,7 @@ io.on("connection", (socket) => {
         managerGame.abortCooldown()
         io.to(managerGame.gameId).emit("game:reset", "Manager disconnected")
         registry.removeGame(managerGame.gameId)
+
         return
       }
     }
@@ -302,6 +350,7 @@ io.on("connection", (socket) => {
       game.players = game.players.filter((p) => p.id !== socket.id)
       io.to(game.manager.id).emit("manager:removePlayer", player.id)
       io.to(game.gameId).emit("game:totalPlayers", game.players.length)
+
       return
     }
 

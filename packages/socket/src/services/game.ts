@@ -130,11 +130,13 @@ class Game {
 
     if (isAlreadyConnected) {
       socket.emit("game:errorMessage", "Player already connected")
+
       return
     }
 
     if (this.players.length >= Game.MAX_PLAYERS) {
       socket.emit("game:errorMessage", "Game is full. Maximum players reached.")
+
       return
     }
 
@@ -142,6 +144,7 @@ class Game {
 
     if (result.error) {
       socket.emit("game:errorMessage", result.error.issues[0].message)
+
       return
     }
 
@@ -152,6 +155,7 @@ class Game {
 
     if (isDuplicateName) {
       socket.emit("game:errorMessage", "Username is already taken. Choose a different one.")
+
       return
     }
 
@@ -429,6 +433,7 @@ class Game {
         )
 
         let isCorrect = false
+
         if (playerAnswer) {
           if (question.type === "type-answer") {
             isCorrect = question.answers.some((a: string) => a.trim().toLowerCase() === String(playerAnswer.answerId).trim().toLowerCase())

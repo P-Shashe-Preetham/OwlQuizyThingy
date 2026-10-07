@@ -22,7 +22,6 @@ const Result = ({
   useEffect(() => {
     player.updatePoints(myPoints)
     sfxResults()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myPoints, sfxResults])
 
   return (

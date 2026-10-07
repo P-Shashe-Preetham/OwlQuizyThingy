@@ -1,7 +1,7 @@
 import type { QuizzWithId } from "@rahoot/common/types/game"
 import Button from "@rahoot/web/features/game/components/Button"
 import clsx from "clsx"
-import { useState } from "react"
+import { useState, type MouseEvent } from "react"
 import { useNavigate } from "react-router"
 import toast from "react-hot-toast"
 import { useSocket } from "@rahoot/web/features/game/contexts/socketProvider"
@@ -24,14 +24,16 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
     }
   }
 
-  const handleEdit = (quizz: QuizzWithId, e: React.MouseEvent) => {
+  const handleEdit = (quizz: QuizzWithId, e: MouseEvent) => {
     e.stopPropagation()
     navigate("/creator", { state: { quizz } })
   }
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = (id: string, e: MouseEvent) => {
     e.stopPropagation()
-    if (confirm("Are you sure you want to delete this quiz?")) {
+
+    // eslint-disable-next-line no-alert
+    if (window.confirm("Are you sure you want to delete this quiz?")) {
       socket?.emit("manager:deleteQuizz", id)
     }
   }
@@ -39,8 +41,11 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
   const handleSubmit = () => {
     if (!selected) {
       toast.error("Please select a quizz")
-      return
+
+      
+return
     }
+
     onSelect(selected)
   }
 

@@ -3,7 +3,7 @@
   "questions": [
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: N_C__SS__RY",
+      "question": "Round 1 – Finish the Word: N_C_SS_RY",
       "answers": [
         "NECESSARY"
       ],
@@ -13,7 +13,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: SEP__R__TE",
+      "question": "Round 1 – Finish the Word: SEP_R_TE",
       "answers": [
         "SEPARATE"
       ],
@@ -23,7 +23,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: O_C__S__ON",
+      "question": "Round 1 – Finish the Word: O_C_S_ON",
       "answers": [
         "OCCASION"
       ],
@@ -33,7 +33,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: MAINT__N__NCE",
+      "question": "Round 1 – Finish the Word: MAINT_N_NCE",
       "answers": [
         "MAINTENANCE"
       ],
@@ -53,7 +53,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: PRON__NCI__T__ON",
+      "question": "Round 1 – Finish the Word: PRON_NCI_T_ON",
       "answers": [
         "PRONUNCIATION"
       ],
@@ -63,7 +63,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: PR_V__L__GE",
+      "question": "Round 1 – Finish the Word: PR_V_L_GE",
       "answers": [
         "PRIVILEGE"
       ],
@@ -73,7 +73,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: O_T_ _IZE",
+      "question": "Round 1 – Finish the Word: O_T__IZE",
       "answers": [
         "OPTIMIZE"
       ],
@@ -83,7 +83,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: RH__T_M",
+      "question": "Round 1 – Finish the Word: RH_T_M",
       "answers": [
         "RHYTHM"
       ],
@@ -93,7 +93,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: MISC__LL__NE__US",
+      "question": "Round 1 – Finish the Word: MISC_LL_NE__US",
       "answers": [
         "MISCELLANEOUS"
       ],
@@ -103,7 +103,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 1 – Finish the Word: ID__S__NCR__SY",
+      "question": "Round 1 – Finish the Word: ID__S_NCR_SY",
       "answers": [
         "IDIOSYNCRASY"
       ],
@@ -113,7 +113,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 2 – Scrambled Words: NTELEPHO",
+      "question": "Round 2 – Scrambled Words: NTELEPHOE",
       "answers": [
         "TELEPHONE"
       ],
@@ -133,7 +133,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 2 – Scrambled Words: PLEPAER",
+      "question": "Round 2 – Scrambled Words: RPEPAER",
       "answers": [
         "PREPARE"
       ],
@@ -193,7 +193,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 2 – Scrambled Words: ROPGMARNIM",
+      "question": "Round 2 – Scrambled Words: ROPGMARNMIG",
       "answers": [
         "PROGRAMMING"
       ],
@@ -213,7 +213,7 @@
     },
     {
       "type": "type-answer",
-      "question": "Round 2 – Scrambled Words: RTEPRETNI",
+      "question": "Round 2 – Scrambled Words: RTEPRETRENI",
       "answers": [
         "INTERPRETER"
       ],
@@ -325,7 +325,10 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Funny",
       "answers": [
-        "Bunny"
+        "Bunny",
+        "Sunny",
+        "Honey",
+        "Money"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -335,7 +338,9 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Lazy",
       "answers": [
-        "Crazy"
+        "Crazy",
+        "Daisy",
+        "Hazy"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -345,7 +350,9 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Happy",
       "answers": [
-        "Snappy"
+        "Snappy",
+        "Clappy",
+        "Sappy"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -355,7 +362,10 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Chilly",
       "answers": [
-        "Silly"
+        "Silly",
+        "Willy",
+        "Billy",
+        "Hilly"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -365,7 +375,10 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Bus",
       "answers": [
-        "Fuss"
+        "Fuss",
+        "Plus",
+        "Us",
+        "Thus"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -375,7 +388,11 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Hack",
       "answers": [
-        "Back"
+        "Back",
+        "Pack",
+        "Track",
+        "Black",
+        "Sack"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -385,7 +402,11 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Zoom",
       "answers": [
-        "Room"
+        "Room",
+        "Boom",
+        "Groom",
+        "Bloom",
+        "Doom"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -395,7 +416,9 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Mouse",
       "answers": [
-        "House"
+        "House",
+        "Blouse",
+        "Spouse"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -405,7 +428,8 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Data",
       "answers": [
-        "Beta"
+        "Beta",
+        "Theta"
       ],
       "solution": 0,
       "cooldown": 5,
@@ -415,7 +439,11 @@
       "type": "type-answer",
       "question": "Round 4 – Rhyme Time: Tech",
       "answers": [
-        "Check"
+        "Check",
+        "Deck",
+        "Neck",
+        "Peck",
+        "Spec"
       ],
       "solution": 0,
       "cooldown": 5,

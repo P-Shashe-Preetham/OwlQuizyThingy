@@ -19,7 +19,8 @@ const Username = () => {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleLogin = () => {
-    if (!gameId || isLoading || !username.trim()) return
+    if (!gameId || isLoading || !username.trim()) {return}
+
     setIsLoading(true)
     socket?.emit("player:login", { gameId, data: { username: username.trim() } })
   }

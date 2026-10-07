@@ -14,7 +14,8 @@ const ManagerPassword = ({ onSubmit }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = () => {
-    if (isLoading || !password.trim()) return
+    if (isLoading || !password.trim()) {return}
+
     setIsLoading(true)
     onSubmit(password)
   }
