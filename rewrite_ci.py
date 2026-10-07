@@ -1,4 +1,6 @@
-name: OwlQuizThingy CI Pipeline
+import sys
+
+ci_yaml = """name: OwlQuizThingy CI Pipeline
 
 on:
   push:
@@ -11,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -23,9 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r exec tsc --noEmit
@@ -35,9 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
@@ -61,9 +63,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -78,10 +80,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run CodeQL Analysis
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript, typescript
-      - uses: github/codeql-action/analyze@v4
+      - uses: github/codeql-action/analyze@v3
 
   container-build:
     needs: security
@@ -133,3 +135,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: echo "Smoke testing production endpoint"
+"""
+
+with open(".github/workflows/ci.yml", "w") as f:
+    f.write(ci_yaml)
+
+print("ci.yml updated")

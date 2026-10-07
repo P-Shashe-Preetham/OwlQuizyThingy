@@ -1,5 +1,5 @@
 import type { QuizzWithId } from "@rahoot/common/types/game"
-import Button from "@rahoot/web/features/game/components/Button"
+import Button from "@rahoot/web/shared/components/Button"
 import clsx from "clsx"
 import { useState, type MouseEvent } from "react"
 import { useNavigate } from "react-router"
