@@ -2,9 +2,9 @@ import { Answer, Player, Quizz } from "@rahoot/common/types/game"
 import { Server, Socket } from "@rahoot/common/types/game/socket"
 import { GAME_STATE, GameState, StatusDataMap } from "@rahoot/common/types/game/status"
 import { usernameValidator } from "@rahoot/common/validators/auth"
-import Registry from "@rahoot/socket/services/registry"
-import { createInviteCode, timeToPoint } from "@rahoot/socket/utils/game"
-import sleep from "@rahoot/socket/utils/sleep"
+import Registry from "../services/registry"
+import { createInviteCode, timeToPoint } from "../utils/game"
+import sleep from "../utils/sleep"
 import { v4 as uuid } from "uuid"
 
 const registry = Registry.getInstance()
@@ -44,6 +44,7 @@ class Game {
     active: boolean
     ms: number
     timer?: ReturnType<typeof setInterval>
+    resolver?: () => void
   }
 
   // Generation guard to cancel stale timer callbacks when round or state changes
@@ -303,10 +304,10 @@ class Game {
     let count = seconds - 1
 
     return new Promise<void>((resolve) => {
+      this.cooldown.resolver = resolve
       this.cooldown.timer = setInterval(() => {
         if (!this.cooldown.active || count <= 0) {
           this.abortCooldown()
-          resolve()
 
           return
         }
@@ -324,6 +325,11 @@ class Game {
     }
 
     this.cooldown.active = false
+
+    if (this.cooldown.resolver) {
+      this.cooldown.resolver()
+      this.cooldown.resolver = undefined
+    }
   }
 
   async start(socket: Socket) {
@@ -332,6 +338,11 @@ class Game {
     }
 
     if (this.started) {
+      return
+    }
+
+    // Only allow start from WAITING
+    if (this.currentState !== GAME_STATE.WAITING) {
       return
     }
 
@@ -515,8 +526,26 @@ class Game {
     const player = this.players.find((p) => p.id === socket.id)
     const question = this.quizz.questions[this.round.currentQuestion]
 
-    if (!player || !question) {
-      return
+    if (!player) {
+      socket.emit("game:errorMessage", "Player not found or disconnected")
+
+
+return
+    }
+
+    if (!question) {
+      socket.emit("game:errorMessage", "Question not found")
+
+
+return
+    }
+
+    // Only allow answers from connected players
+    if (!player.connected) {
+      socket.emit("game:errorMessage", "Disconnected players cannot answer")
+
+
+return
     }
 
     // Check for duplicate answer submission
@@ -541,10 +570,20 @@ class Game {
       .emit("game:playerAnswer", this.round.playersAnswers.length)
 
     this.io.to(this.gameId).emit("game:totalPlayers", this.players.length)
+
+    // Fast-forward if everyone has answered
+    if (this.round.playersAnswers.length >= this.players.length) {
+      this.abortCooldown()
+    }
   }
 
   nextRound(socket: Socket) {
     if (!this.started || socket.id !== this.manager.id) {
+      return
+    }
+
+    // Only allow nextRound from SHOW_LEADERBOARD or SHOW_RESULT
+    if (this.currentState !== GAME_STATE.SHOW_LEADERBOARD && this.currentState !== GAME_STATE.SHOW_RESULT) {
       return
     }
 
@@ -572,6 +611,10 @@ class Game {
   }
 
   showLeaderboard() {
+    if (this.currentState !== GAME_STATE.SHOW_RESULT) {
+      return
+    }
+
     const isLastRound =
       this.round.currentQuestion + 1 === this.quizz.questions.length
 
@@ -586,6 +629,9 @@ class Game {
 
       return
     }
+
+    this.currentState = GAME_STATE.SHOW_LEADERBOARD
+
 
     const oldLeaderboard = this.tempOldLeaderboard
       ? this.tempOldLeaderboard

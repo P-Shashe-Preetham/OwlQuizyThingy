@@ -7,9 +7,9 @@ import toast from "react-hot-toast"
 import { useSocket } from "@rahoot/web/features/game/contexts/socketProvider"
 
 type Props = {
-  quizzList: QuizzWithId[]
-  onSelect: (_id: string) => void
-}
+  quizzList: QuizzWithId[];
+  onSelect: (_id: string) => void;
+};
 
 const SelectQuizz = ({ quizzList, onSelect }: Props) => {
   const [selected, setSelected] = useState<string | null>(null)
@@ -29,6 +29,18 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
     navigate("/creator", { state: { quizz } })
   }
 
+  const handleDuplicate = (quizz: QuizzWithId, e: MouseEvent) => {
+    e.stopPropagation()
+    // Omit the id and append " (Copy)" to the subject
+    const { id: _id, ...duplicatedQuiz } = quizz
+    void _id
+    navigate("/creator", {
+      state: {
+        quizz: { ...duplicatedQuiz, subject: `${quizz.subject} (Copy)` },
+      },
+    })
+  }
+
   const handleDelete = (id: string, e: MouseEvent) => {
     e.stopPropagation()
 
@@ -42,8 +54,7 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
     if (!selected) {
       toast.error("Please select a quizz")
 
-      
-return
+      return
     }
 
     onSelect(selected)
@@ -74,7 +85,7 @@ return
                 key={quizz.id}
                 className={clsx(
                   "flex w-full items-center justify-between rounded-md p-3 outline outline-gray-300 transition-colors hover:bg-gray-50 cursor-pointer",
-                  selected === quizz.id && "bg-blue-50/50"
+                  selected === quizz.id && "bg-blue-50/50",
                 )}
                 onClick={handleSelect(quizz.id)}
               >
@@ -88,15 +99,21 @@ return
                   ></div>
                   <span className="font-bold">{quizz.subject}</span>
                 </div>
-                
+
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded font-semibold text-gray-700 transition-colors cursor-pointer"
                     onClick={(e) => handleEdit(quizz, e)}
                   >
                     Edit
                   </button>
-                  <button 
+                  <button
+                    className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded font-semibold text-gray-700 transition-colors cursor-pointer"
+                    onClick={(e) => handleDuplicate(quizz, e)}
+                  >
+                    Duplicate
+                  </button>
+                  <button
                     className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded font-semibold text-red-600 transition-colors cursor-pointer"
                     onClick={(e) => handleDelete(quizz.id, e)}
                   >
@@ -108,9 +125,7 @@ return
           </div>
         )}
       </div>
-      {quizzList.length > 0 && (
-        <Button onClick={handleSubmit}>Submit</Button>
-      )}
+      {quizzList.length > 0 && <Button onClick={handleSubmit}>Submit</Button>}
     </div>
   )
 }

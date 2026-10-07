@@ -1,6 +1,6 @@
 import { Socket } from "@rahoot/common/types/game/socket"
-import Game from "@rahoot/socket/services/game"
-import Registry from "@rahoot/socket/services/registry"
+import Game from "../services/game"
+import Registry from "../services/registry"
 
 export const withGame = (
   gameId: string | undefined,
@@ -46,11 +46,11 @@ export const createInviteCode = (length = 6): string => {
 }
 
 export const timeToPoint = (startTime: number, seconds: number): number => {
-  const elapsedSeconds = (Date.now() - startTime) / 1000
+  const elapsedSeconds = Math.max(0, (Date.now() - startTime) / 1000)
 
   // Kahoot official formula ensures minimum 500 points for correct answer
   const maxPoints = 1000
-  const decrement = maxPoints / (2 * seconds)
+  const decrement = maxPoints / (2 * Math.max(1, seconds))
   let points = maxPoints - (decrement * elapsedSeconds)
   
   points = Math.round(Math.max(500, Math.min(1000, points)))
