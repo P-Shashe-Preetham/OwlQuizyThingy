@@ -1,7 +1,18 @@
 services:
-  rahoot:
-    image: ralex91/rahoot:latest
+  owlquizy:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    environment:
+      - MANAGER_PASSWORD=${MANAGER_PASSWORD:-admin123}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
     volumes:
       - ./config:/app/config
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

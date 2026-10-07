@@ -1,7 +1,7 @@
 import type { Player } from "@rahoot/common/types/game"
 
-export const STATUS = {
-  SHOW_ROOM: "SHOW_ROOM",
+export const GAME_STATE = {
+  WAITING: "WAITING",
   SHOW_START: "SHOW_START",
   SHOW_PREPARED: "SHOW_PREPARED",
   SHOW_QUESTION: "SHOW_QUESTION",
@@ -10,10 +10,14 @@ export const STATUS = {
   SHOW_RESPONSES: "SHOW_RESPONSES",
   SHOW_LEADERBOARD: "SHOW_LEADERBOARD",
   FINISHED: "FINISHED",
+  CANCELLED: "CANCELLED",
   WAIT: "WAIT",
 } as const
 
-export type Status = (typeof STATUS)[keyof typeof STATUS]
+export type GameState = (typeof GAME_STATE)[keyof typeof GAME_STATE]
+
+export const STATUS = GAME_STATE
+export type Status = GameState
 
 export type CommonStatusDataMap = {
   SHOW_START: { time: number; subject: string }
@@ -39,6 +43,8 @@ export type CommonStatusDataMap = {
   }
   WAIT: { text: string }
   FINISHED: { subject: string; top: Player[] }
+  CANCELLED: { reason: string }
+  WAITING: { text: string; inviteCode?: string }
 }
 
 type ManagerExtraStatus = {

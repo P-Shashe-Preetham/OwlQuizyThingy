@@ -1,0 +1,44 @@
+name: OwlQuizThingy CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js & pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint Codebase
+        run: pnpm lint
+
+      - name: Typecheck TypeScript
+        run: pnpm -r exec tsc --noEmit
+
+      - name: Run Test Suite
+        run: pnpm test
+
+      - name: Build Application
+        run: pnpm build
+
+      - name: Verify Docker Container Build
+        run: docker build -t owlquizy-test .

@@ -1,4 +1,5 @@
 import { QuizzWithId } from "@rahoot/common/types/game"
+import { quizzSchema } from "@rahoot/common/validators/game"
 import fs from "fs"
 import { resolve } from "path"
 
@@ -9,12 +10,43 @@ const getPath = (path: string = "") =>
     ? resolve(inContainerPath, path)
     : resolve(process.cwd(), "../../config", path)
 
+function parseQuizFile(file: string): QuizzWithId | null {
+  try {
+    const filePath = getPath(`quizz/${file}`)
+    const data = fs.readFileSync(filePath, "utf-8")
+    const parsed = JSON.parse(data)
+
+    const validationResult = quizzSchema.safeParse(parsed)
+
+    if (!validationResult.success) {
+      console.error(
+        `⚠️ Malformed quiz file skipped: ${file}. Issues:`,
+        validationResult.error.format(),
+      )
+
+      return null
+    }
+
+    const fileId = file.replace(/\.json$/u, "")
+    const id = parsed.id && typeof parsed.id === "string" ? parsed.id : fileId
+
+    return {
+      ...validationResult.data,
+      id,
+    }
+  } catch (fileError) {
+    console.error(`❌ Failed to read or parse quiz file ${file}:`, fileError)
+
+    return null
+  }
+}
+
 class Config {
   static init() {
     const isConfigFolderExists = fs.existsSync(getPath())
 
     if (!isConfigFolderExists) {
-      fs.mkdirSync(getPath())
+      fs.mkdirSync(getPath(), { recursive: true })
     }
 
     const isGameConfigExists = fs.existsSync(getPath("game.json"))
@@ -24,7 +56,7 @@ class Config {
         getPath("game.json"),
         JSON.stringify(
           {
-            managerPassword: "PASSWORD",
+            managerPassword: "",
           },
           null,
           2,
@@ -35,7 +67,7 @@ class Config {
     const isQuizzExists = fs.existsSync(getPath("quizz"))
 
     if (!isQuizzExists) {
-      fs.mkdirSync(getPath("quizz"))
+      fs.mkdirSync(getPath("quizz"), { recursive: true })
 
       fs.writeFileSync(
         getPath("quizz/example.json"),
@@ -87,20 +119,16 @@ class Config {
       } catch (error) {
         console.error("Failed to read game config:", error)
       }
-    } else {
-      console.error("Game config not found, falling back to defaults")
     }
 
     if (process.env.MANAGER_PASSWORD) {
       configObj.managerPassword = process.env.MANAGER_PASSWORD
     }
 
-    configObj.managerPassword ||= "PASSWORD"
-
     return configObj
   }
 
-  static quizz() {
+  static quizz(): QuizzWithId[] {
     const isExists = fs.existsSync(getPath("quizz"))
 
     if (!isExists) {
@@ -112,21 +140,19 @@ class Config {
         .readdirSync(getPath("quizz"))
         .filter((file) => file.endsWith(".json"))
 
-      const quizz: QuizzWithId[] = files.map((file) => {
-        const data = fs.readFileSync(getPath(`quizz/${file}`), "utf-8")
-        const config = JSON.parse(data)
+      const quizzes: QuizzWithId[] = []
 
-        const id = file.replace(".json", "")
+      for (const file of files) {
+        const quiz = parseQuizFile(file)
 
-        return {
-          id,
-          ...config,
+        if (quiz) {
+          quizzes.push(quiz)
         }
-      })
+      }
 
-      return quizz || []
+      return quizzes
     } catch (error) {
-      console.error("Failed to read quizz config:", error)
+      console.error("Failed to read quizz directory:", error)
 
       return []
     }

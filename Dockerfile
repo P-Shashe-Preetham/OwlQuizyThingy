@@ -20,7 +20,7 @@ RUN pnpm build
 # ---- RUNNER ----
 FROM alpine:3.21 AS runner
 
-RUN apk add --no-cache nginx nodejs supervisor
+RUN apk add --no-cache nginx nodejs supervisor wget
 
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
@@ -30,5 +30,7 @@ COPY --from=builder /app/packages/socket/dist/index.cjs /app/socket/index.cjs
 COPY --from=builder /app/config /app/config
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD wget -qO- http://localhost:3000/health
 
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]
