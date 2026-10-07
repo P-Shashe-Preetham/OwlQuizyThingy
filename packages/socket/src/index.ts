@@ -1,3 +1,4 @@
+import { trackEvent } from "./lib/analytics"
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import { Server } from "@rahoot/common/types/game/socket"
 import {
@@ -195,12 +196,14 @@ io.on("connection", (socket) => {
 
       if (parse.data !== config.managerPassword) {
         socket.emit("manager:errorMessage", "Invalid password")
+        trackEvent("manager_auth_failure", { reason: "invalid_password", ip: socket.handshake.address })
 
         return
       }
 
       // Mark this socket as authenticated manager
       authenticatedManagers.add(socket.id)
+      trackEvent("manager_auth_success", { socketId: socket.id })
 
       const combinedQuizzList = await getCombinedQuizList()
 
@@ -329,6 +332,7 @@ io.on("connection", (socket) => {
     const game = new Game(io, socket, quizz)
 
     registry.addGame(game)
+    trackEvent("game_created", { gameId: game.gameId, quizzId: parse.data })
   })
 
   socket.on("player:join", (inviteCode) => {
@@ -349,6 +353,7 @@ io.on("connection", (socket) => {
     }
 
     socket.emit("game:successRoom", game.gameId)
+    trackEvent("player_joined_room", { gameId: game.gameId, socketId: socket.id })
   })
 
   socket.on("player:login", (payload) => {
@@ -515,17 +520,24 @@ io.on("connection", (socket) => {
   })
 })
 
-function gracefulShutdown(signal: string) {
+
+async function gracefulShutdown(signal: string) {
   console.log(`Received ${signal}. Shutting down gracefully...`)
+  await trackEvent("server_shutdown", { signal })
 
   // Notify all connected clients
   io.emit("game:reset", "Server is shutting down for maintenance")
 
+  // Close sockets
+  io.disconnectSockets()
+
   // Give time for messages to be sent
   setTimeout(() => {
     Registry.getInstance().cleanup()
-    httpServer.close()
-    process.exit(0)
+    httpServer.close((err) => {
+      console.log("HTTP server closed")
+      process.exit(err ? 1 : 0)
+    })
   }, 1000)
 }
 

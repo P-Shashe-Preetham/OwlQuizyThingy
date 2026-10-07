@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.{js,ts,tsx}"
+      run: pnpm lint
+    test:
+      glob: "*.{js,ts,tsx}"
+      run: pnpm test
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx commitlint --edit {1}
