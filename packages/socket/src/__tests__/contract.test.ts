@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest"
-
 import { playerLoginSchema } from "../../../common/src/validators/game"
 
 describe("Socket.IO Contract Testing", () => {
