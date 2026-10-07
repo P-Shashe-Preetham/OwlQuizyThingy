@@ -2,6 +2,7 @@ import type { QuizzWithId } from "@rahoot/common/types/game"
 import { STATUS } from "@rahoot/common/types/game/status"
 import ManagerPassword from "@rahoot/web/features/game/components/create/ManagerPassword"
 import SelectQuizz from "@rahoot/web/features/game/components/create/SelectQuizz"
+import GameSettingsModal from "@rahoot/web/features/game/components/create/GameSettingsModal"
 import {
   useEvent,
   useSocket,
@@ -17,6 +18,7 @@ const ManagerAuthPage = () => {
 
   const [isAuth, setIsAuth] = useState(false)
   const [quizzList, setQuizzList] = useState<QuizzWithId[]>([])
+  const [selectedQuizzId, setSelectedQuizzId] = useState<string | null>(null)
 
   useEvent("manager:quizzList", (quizzList) => {
     setIsAuth(true)
@@ -25,7 +27,10 @@ const ManagerAuthPage = () => {
 
   useEvent("manager:gameCreated", ({ gameId, inviteCode }) => {
     setGameId(gameId)
-    setStatus(STATUS.SHOW_ROOM, { text: "Waiting for the players", inviteCode })
+    setStatus(STATUS.SHOW_ROOM, {
+      text: "Waiting for the players",
+      inviteCode,
+    })
     navigate(`/party/manager/${gameId}`)
   })
 
@@ -33,6 +38,11 @@ const ManagerAuthPage = () => {
     socket?.emit("manager:auth", password)
   }
   const handleCreate = (quizzId: string) => {
+    setSelectedQuizzId(quizzId)
+  }
+
+  const handleConfirmSettings = (quizzId: string, _settings: any) => {
+    // We could pass settings to backend if supported, for now just emit create
     socket?.emit("game:create", quizzId)
   }
 
@@ -42,7 +52,15 @@ const ManagerAuthPage = () => {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <SelectQuizz quizzList={quizzList} onSelect={handleCreate} />
+      {selectedQuizzId ? (
+        <GameSettingsModal
+          quizzId={selectedQuizzId}
+          onConfirm={handleConfirmSettings}
+          onCancel={() => setSelectedQuizzId(null)}
+        />
+      ) : (
+        <SelectQuizz quizzList={quizzList} onSelect={handleCreate} />
+      )}
       <Link
         to="/creator"
         className="z-20 w-full max-w-md bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-6 rounded-xl border-2 border-dashed border-white/20 hover:border-white/40 transition-all flex items-center justify-center gap-2 no-underline"
