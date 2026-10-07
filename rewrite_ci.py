@@ -1,6 +1,6 @@
 import sys
 
-ci_yaml = """name: OwlQuizThingy CI Pipeline
+ci_yaml = """name: OwlQuizyThingy CI Pipeline
 
 on:
   push:
@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Deploy to Render/Vercel via CLI or webhook"
+      - run: echo "Deploy to Docker via CLI"
 
   smoke-test:
     needs: deploy
