@@ -1,6 +1,6 @@
-import Button from "@rahoot/web/features/game/components/Button"
-import Form from "@rahoot/web/features/game/components/Form"
-import Input from "@rahoot/web/features/game/components/Input"
+import Button from "@rahoot/web/shared/components/Button"
+import Form from "@rahoot/web/shared/components/Form"
+import Input from "@rahoot/web/shared/components/Input"
 import {
   useEvent,
   useSocket,

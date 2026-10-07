@@ -1,7 +1,7 @@
 import type { Status } from "@rahoot/common/types/game/status"
 import background from "@rahoot/web/assets/background.webp"
-import Button from "@rahoot/web/features/game/components/Button"
-import Loader from "@rahoot/web/features/game/components/Loader"
+import Button from "@rahoot/web/shared/components/Button"
+import Loader from "@rahoot/web/shared/components/Loader"
 import {
   useEvent,
   useSocket,
