@@ -1,6 +1,6 @@
 # ---- BASE ----
 FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 # ---- BUILDER ----
 FROM base AS builder
@@ -11,7 +11,7 @@ COPY packages/common/package.json ./packages/common/
 COPY packages/web/package.json ./packages/web/
 COPY packages/socket/package.json ./packages/socket/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
