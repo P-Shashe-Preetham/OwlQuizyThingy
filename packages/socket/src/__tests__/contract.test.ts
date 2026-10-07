@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { selectedAnswerSchema, playerLoginSchema } from "@rahoot/common"
+import { selectedAnswerSchema, playerLoginSchema } from "../../../common/src/validators/game"
 
 describe("Socket.IO Contract Testing", () => {
   it("handles valid events correctly", () => {

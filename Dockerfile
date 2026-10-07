@@ -29,6 +29,14 @@ COPY --from=builder /app/packages/web/dist /app/web
 COPY --from=builder /app/packages/socket/dist/index.cjs /app/socket/index.cjs
 COPY --from=builder /app/config /app/config
 
+RUN adduser -D appuser && \
+    chown -R appuser:appuser /app && \
+    chown appuser:appuser /etc/supervisord.conf && \
+    mkdir -p /tmp/supervisor && \
+    chown -R appuser:appuser /tmp/supervisor
+
+USER appuser
+
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD wget -qO- http://localhost:3000/health

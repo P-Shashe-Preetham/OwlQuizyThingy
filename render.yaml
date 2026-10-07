@@ -4,6 +4,7 @@ services:
     runtime: node
     buildCommand: pnpm install && pnpm -r run build
     startCommand: node packages/socket/dist/index.cjs
+    healthCheckPath: /health
     envVars:
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
@@ -11,5 +12,7 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
+      - key: NODE_ENV
+        value: production
       - key: PORT
         value: 3001
