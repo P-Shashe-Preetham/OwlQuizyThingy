@@ -4,7 +4,7 @@ import clsx from "clsx"
 import { useState, type MouseEvent } from "react"
 import { useNavigate } from "react-router"
 import toast from "react-hot-toast"
-import { useSocket } from "@rahoot/web/features/game/contexts/socketProvider"
+import { useEvent, useSocket } from "@rahoot/web/features/game/contexts/socketProvider"
 
 type Props = {
   quizzList: QuizzWithId[];
@@ -49,6 +49,11 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
       socket?.emit("manager:deleteQuizz", id)
     }
   }
+
+
+  useEvent("manager:errorMessage", (message) => {
+    toast.error(message)
+  })
 
   const handleSubmit = () => {
     if (!selected) {
