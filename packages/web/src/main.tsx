@@ -1,7 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import ErrorBoundary from "./components/ErrorBoundary"
-import Toaster from "./features/game/components/Toaster"
+import Toaster from "./shared/components/Toaster"
 import "./index.css"
 import Router from "./router"
 
