@@ -8,6 +8,8 @@ services:
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
       - key: MANAGER_PASSWORD
-        value: admin123
+        sync: false
       - key: CORS_ORIGIN
-        value: "*"
+        sync: false
+      - key: PORT
+        value: 3001

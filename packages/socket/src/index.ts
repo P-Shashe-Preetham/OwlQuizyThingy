@@ -1,6 +1,14 @@
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import { Server } from "@rahoot/common/types/game/socket"
-import { inviteCodeValidator } from "@rahoot/common/validators/auth"
+import {
+  gameIdSchema,
+  inviteCodeSchema,
+  kickPlayerSchema,
+  managerAuthSchema,
+  playerLoginSchema,
+  quizzSchema,
+  selectedAnswerSchema,
+} from "@rahoot/common/validators/game"
 import Config from "@rahoot/socket/services/config"
 import FirebaseService from "@rahoot/socket/services/firebase"
 import Game from "@rahoot/socket/services/game"
@@ -9,10 +17,11 @@ import { withGame } from "@rahoot/socket/utils/game"
 import http from "http"
 import { Server as ServerIO } from "socket.io"
 
-const WS_PORT = 3001
+const WS_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001
 const MAX_GAMES = 50
 const AUTH_RATE_LIMIT_WINDOW_MS = 60_000
 const AUTH_MAX_ATTEMPTS = 5
+const MAX_PAYLOAD_SIZE = 1e6
 
 // Track auth attempts per IP for rate limiting
 const authAttempts = new Map<string, { count: number; resetAt: number }>()
@@ -39,10 +48,13 @@ const httpServer = http.createServer((req, res) => {
   res.end()
 })
 
+const corsOrigin = process.env.CORS_ORIGIN || "*"
+
 const io: Server = new ServerIO(httpServer, {
   path: "/ws",
+  maxHttpBufferSize: MAX_PAYLOAD_SIZE,
   cors: {
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: corsOrigin === "*" ? "*" : corsOrigin.split(",").map((o) => o.trim()),
     methods: ["GET", "POST"],
   },
   pingInterval: 15000,
@@ -102,9 +114,17 @@ io.on("connection", (socket) => {
     `A user connected: socketId: ${socket.id}, clientId: ${socket.handshake.auth.clientId}`,
   )
 
-  socket.on("player:reconnect", ({ gameId }) => {
+  socket.on("player:reconnect", (payload) => {
+    const parse = gameIdSchema.safeParse(payload?.gameId)
+
+    if (!parse.success) {
+      socket.emit("game:reset", "Invalid payload")
+
+      return
+    }
+
     const game = registry.getPlayerGame(
-      gameId,
+      parse.data,
       socket.handshake.auth.clientId,
     )
 
@@ -117,9 +137,17 @@ io.on("connection", (socket) => {
     socket.emit("game:reset", "Game not found")
   })
 
-  socket.on("manager:reconnect", ({ gameId }) => {
+  socket.on("manager:reconnect", (payload) => {
+    const parse = gameIdSchema.safeParse(payload?.gameId)
+
+    if (!parse.success) {
+      socket.emit("game:reset", "Invalid payload")
+
+      return
+    }
+
     const game = registry.getManagerGame(
-      gameId,
+      parse.data,
       socket.handshake.auth.clientId,
     )
 
@@ -134,6 +162,14 @@ io.on("connection", (socket) => {
 
   socket.on("manager:auth", async (password) => {
     try {
+      const parse = managerAuthSchema.safeParse(password)
+
+      if (!parse.success) {
+        socket.emit("manager:errorMessage", "Invalid password payload")
+
+        return
+      }
+
       // Rate limiting
       const ip = socket.handshake.address
 
@@ -148,7 +184,7 @@ io.on("connection", (socket) => {
 
       const config = Config.game()
 
-      if (config.managerPassword === "PASSWORD") {
+      if (!config.managerPassword || config.managerPassword === "PASSWORD") {
         socket.emit(
           "manager:errorMessage",
           "Manager password is not configured",
@@ -157,7 +193,7 @@ io.on("connection", (socket) => {
         return
       }
 
-      if (password !== config.managerPassword) {
+      if (parse.data !== config.managerPassword) {
         socket.emit("manager:errorMessage", "Invalid password")
 
         return
@@ -182,11 +218,25 @@ io.on("connection", (socket) => {
       return
     }
 
+    const parse = quizzSchema.safeParse(quizz)
+
+    if (!parse.success) {
+      socket.emit(
+        "manager:errorMessage",
+        `Validation error: ${parse.error.issues[0].message}`,
+      )
+
+      return
+    }
+
     try {
       if (FirebaseService.isInitialized()) {
-        const id = await FirebaseService.saveQuizz(quizz)
+        const id = await FirebaseService.saveQuizz(
+          parse.data,
+          (quizz as any)?.id,
+        )
 
-        socket.emit("manager:quizzSaved", { id, subject: quizz.subject })
+        socket.emit("manager:quizzSaved", { id, subject: parse.data.subject })
       } else {
         socket.emit(
           "manager:errorMessage",
@@ -206,9 +256,17 @@ io.on("connection", (socket) => {
       return
     }
 
+    const parse = gameIdSchema.safeParse(id)
+
+    if (!parse.success) {
+      socket.emit("manager:errorMessage", "Invalid quiz ID")
+
+      return
+    }
+
     try {
       if (FirebaseService.isInitialized()) {
-        await FirebaseService.deleteQuizz(id)
+        await FirebaseService.deleteQuizz(parse.data)
       }
 
       // Return combined list (Firebase + local) — not just Firebase
@@ -231,6 +289,14 @@ io.on("connection", (socket) => {
       return
     }
 
+    const parse = gameIdSchema.safeParse(quizzId)
+
+    if (!parse.success) {
+      socket.emit("game:errorMessage", "Invalid quiz ID")
+
+      return
+    }
+
     if (registry.getGameCount() >= MAX_GAMES) {
       socket.emit(
         "game:errorMessage",
@@ -245,13 +311,13 @@ io.on("connection", (socket) => {
     if (FirebaseService.isInitialized()) {
       const quizzes = await FirebaseService.getQuizzes()
 
-      quizz = quizzes.find((q) => q.id === quizzId) ?? null
+      quizz = quizzes.find((q) => q.id === parse.data) ?? null
     }
 
     if (!quizz) {
       const quizzList = Config.quizz()
 
-      quizz = quizzList.find((q) => q.id === quizzId) ?? null
+      quizz = quizzList.find((q) => q.id === parse.data) ?? null
     }
 
     if (!quizz) {
@@ -266,15 +332,15 @@ io.on("connection", (socket) => {
   })
 
   socket.on("player:join", (inviteCode) => {
-    const result = inviteCodeValidator.safeParse(inviteCode)
+    const result = inviteCodeSchema.safeParse(inviteCode)
 
-    if (result.error) {
+    if (!result.success) {
       socket.emit("game:errorMessage", result.error.issues[0].message)
 
       return
     }
 
-    const game = registry.getGameByInviteCode(inviteCode)
+    const game = registry.getGameByInviteCode(result.data)
 
     if (!game) {
       socket.emit("game:errorMessage", "Game not found")
@@ -285,35 +351,125 @@ io.on("connection", (socket) => {
     socket.emit("game:successRoom", game.gameId)
   })
 
-  socket.on("player:login", ({ gameId, data }) =>
-    withGame(gameId, socket, (game) => game.join(socket, data.username)),
-  )
+  socket.on("player:login", (payload) => {
+    const parse = playerLoginSchema.safeParse(payload)
 
-  socket.on("manager:kickPlayer", ({ gameId, playerId }) =>
-    withGame(gameId, socket, (game) => game.kickPlayer(socket, playerId)),
-  )
+    if (!parse.success) {
+      socket.emit("game:errorMessage", parse.error.issues[0].message)
 
-  socket.on("manager:startGame", ({ gameId }) =>
-    withGame(gameId, socket, (game) => game.start(socket)),
-  )
+      return
+    }
 
-  socket.on("player:selectedAnswer", ({ gameId, data }) =>
-    withGame(gameId, socket, (game) =>
-      game.selectAnswer(socket, data.answerKey),
-    ),
-  )
+    withGame(parse.data.gameId, socket, (game) =>
+      game.join(socket, parse.data.data.username),
+    )
+  })
 
-  socket.on("manager:abortQuiz", ({ gameId }) =>
-    withGame(gameId, socket, (game) => game.abortRound(socket)),
-  )
+  socket.on("manager:kickPlayer", (payload) => {
+    if (!isAuthenticatedManager(socket.id)) {
+      socket.emit("manager:errorMessage", "Unauthorized")
 
-  socket.on("manager:nextQuestion", ({ gameId }) =>
-    withGame(gameId, socket, (game) => game.nextRound(socket)),
-  )
+      return
+    }
 
-  socket.on("manager:showLeaderboard", ({ gameId }) =>
-    withGame(gameId, socket, (game) => game.showLeaderboard()),
-  )
+    const parse = kickPlayerSchema.safeParse(payload)
+
+    if (!parse.success) {
+      socket.emit("manager:errorMessage", "Invalid payload")
+
+      return
+    }
+
+    withGame(parse.data.gameId, socket, (game) =>
+      game.kickPlayer(socket, parse.data.playerId),
+    )
+  })
+
+  socket.on("manager:startGame", (payload) => {
+    if (!isAuthenticatedManager(socket.id)) {
+      socket.emit("manager:errorMessage", "Unauthorized")
+
+      return
+    }
+
+    const parse = gameIdSchema.safeParse(payload?.gameId)
+
+    if (!parse.success) {
+      socket.emit("manager:errorMessage", "Invalid game ID")
+
+      return
+    }
+
+    withGame(parse.data, socket, (game) => game.start(socket))
+  })
+
+  socket.on("player:selectedAnswer", (payload) => {
+    const parse = selectedAnswerSchema.safeParse(payload)
+
+    if (!parse.success) {
+      socket.emit("game:errorMessage", "Invalid answer payload")
+
+      return
+    }
+
+    withGame(parse.data.gameId, socket, (game) =>
+      game.selectAnswer(socket, parse.data.data.answerKey),
+    )
+  })
+
+  socket.on("manager:abortQuiz", (payload) => {
+    if (!isAuthenticatedManager(socket.id)) {
+      socket.emit("manager:errorMessage", "Unauthorized")
+
+      return
+    }
+
+    const parse = gameIdSchema.safeParse(payload?.gameId)
+
+    if (!parse.success) {
+      socket.emit("manager:errorMessage", "Invalid game ID")
+
+      return
+    }
+
+    withGame(parse.data, socket, (game) => game.abortRound(socket))
+  })
+
+  socket.on("manager:nextQuestion", (payload) => {
+    if (!isAuthenticatedManager(socket.id)) {
+      socket.emit("manager:errorMessage", "Unauthorized")
+
+      return
+    }
+
+    const parse = gameIdSchema.safeParse(payload?.gameId)
+
+    if (!parse.success) {
+      socket.emit("manager:errorMessage", "Invalid game ID")
+
+      return
+    }
+
+    withGame(parse.data, socket, (game) => game.nextRound(socket))
+  })
+
+  socket.on("manager:showLeaderboard", (payload) => {
+    if (!isAuthenticatedManager(socket.id)) {
+      socket.emit("manager:errorMessage", "Unauthorized")
+
+      return
+    }
+
+    const parse = gameIdSchema.safeParse(payload?.gameId)
+
+    if (!parse.success) {
+      socket.emit("manager:errorMessage", "Invalid game ID")
+
+      return
+    }
+
+    withGame(parse.data, socket, (game) => game.showLeaderboard())
+  })
 
   socket.on("disconnect", () => {
     // Clean up authenticated manager tracking

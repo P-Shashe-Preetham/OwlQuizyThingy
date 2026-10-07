@@ -1,6 +1,6 @@
 # ---- BASE ----
 FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 # ---- BUILDER ----
 FROM base AS builder
@@ -11,7 +11,7 @@ COPY packages/common/package.json ./packages/common/
 COPY packages/web/package.json ./packages/web/
 COPY packages/socket/package.json ./packages/socket/
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -20,7 +20,7 @@ RUN pnpm build
 # ---- RUNNER ----
 FROM alpine:3.21 AS runner
 
-RUN apk add --no-cache nginx nodejs supervisor
+RUN apk add --no-cache nginx nodejs supervisor wget
 
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
@@ -30,5 +30,7 @@ COPY --from=builder /app/packages/socket/dist/index.cjs /app/socket/index.cjs
 COPY --from=builder /app/config /app/config
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD wget -qO- http://localhost:3000/health
 
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]

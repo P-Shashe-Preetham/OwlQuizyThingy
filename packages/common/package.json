@@ -1,8 +1,16 @@
 {
   "name": "@rahoot/common",
   "type": "module",
+  "exports": {
+    "./types/game": "./src/types/game/index.ts",
+    "./types/game/socket": "./src/types/game/socket.ts",
+    "./types/game/status": "./src/types/game/status.ts",
+    "./validators/auth": "./src/validators/auth.ts",
+    "./validators/game": "./src/validators/game.ts"
+  },
   "scripts": {
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "socket.io": "^4.8.3",
@@ -11,9 +19,11 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^3.1.2",
     "eslint": "^9.39.4",
     "globals": "^17.4.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.0"
+    "typescript-eslint": "^8.57.0",
+    "vitest": "^3.1.2"
   }
 }

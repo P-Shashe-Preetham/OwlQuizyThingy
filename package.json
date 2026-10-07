@@ -8,11 +8,15 @@
     "build:web": "pnpm --filter @rahoot/web build",
     "start": "pnpm -r --parallel run start",
     "clean": "pnpm -r exec rm -rf dist node_modules",
+    "test": "pnpm -r run test",
     "lint": "pnpm -r --parallel run lint"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.3",
     "dotenv-cli": "^11.0.0",
-    "typescript": "^5.9.3"
+    "socket.io-client": "^4.8.3",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

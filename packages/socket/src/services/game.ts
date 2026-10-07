@@ -1,6 +1,6 @@
 import { Answer, Player, Quizz } from "@rahoot/common/types/game"
 import { Server, Socket } from "@rahoot/common/types/game/socket"
-import { Status, STATUS, StatusDataMap } from "@rahoot/common/types/game/status"
+import { GAME_STATE, GameState, StatusDataMap } from "@rahoot/common/types/game/status"
 import { usernameValidator } from "@rahoot/common/validators/auth"
 import Registry from "@rahoot/socket/services/registry"
 import { createInviteCode, timeToPoint } from "@rahoot/socket/utils/game"
@@ -20,11 +20,12 @@ class Game {
   }
   inviteCode: string
   started: boolean
+  currentState: GameState = GAME_STATE.WAITING
 
-  lastBroadcastStatus: { name: Status; data: StatusDataMap[Status] } | null =
+  lastBroadcastStatus: { name: GameState; data: StatusDataMap[GameState] } | null =
     null
-  managerStatus: { name: Status; data: StatusDataMap[Status] } | null = null
-  playerStatus: Map<string, { name: Status; data: StatusDataMap[Status] }> =
+  managerStatus: { name: GameState; data: StatusDataMap[GameState] } | null = null
+  playerStatus: Map<string, { name: GameState; data: StatusDataMap[GameState] }> =
     new Map()
 
   leaderboard: Player[]
@@ -42,7 +43,11 @@ class Game {
   cooldown: {
     active: boolean
     ms: number
+    timer?: ReturnType<typeof setInterval>
   }
+
+  // Generation guard to cancel stale timer callbacks when round or state changes
+  private currentGeneration = 0
 
   constructor(io: Server, socket: Socket, quizz: Quizz) {
     if (!io) {
@@ -99,64 +104,62 @@ class Game {
     )
   }
 
-  broadcastStatus<T extends Status>(status: T, data: StatusDataMap[T]) {
-    const statusData = { name: status, data }
-    this.lastBroadcastStatus = statusData
-    this.io.to(this.gameId).emit("game:status", statusData)
+  private incrementGeneration(): number {
+    this.currentGeneration += 1
+
+    return this.currentGeneration
   }
 
-  sendStatus<T extends Status>(
-    target: string,
-    status: T,
-    data: StatusDataMap[T],
+  private isValidGeneration(gen: number): boolean {
+    return gen === this.currentGeneration && this.started
+  }
+
+  sendStatus<K extends GameState>(
+    socketId: string,
+    name: K,
+    data: StatusDataMap[K],
   ) {
-    const statusData = { name: status, data }
-
-    if (this.manager.id === target) {
-      this.managerStatus = statusData
-    } else {
-      this.playerStatus.set(target, statusData)
-    }
-
-    this.io.to(target).emit("game:status", statusData)
+    this.playerStatus.set(socketId, { name, data })
+    this.io.to(socketId).emit("game:status", { name, data })
   }
 
-  private static readonly MAX_PLAYERS = 100
+  broadcastStatus<K extends GameState>(name: K, data: StatusDataMap[K]) {
+    this.currentState = name
+    this.lastBroadcastStatus = { name, data }
+    this.io.to(this.gameId).emit("game:status", { name, data })
+  }
 
   join(socket: Socket, username: string) {
-    const isAlreadyConnected = this.players.find(
-      (p) => p.clientId === socket.handshake.auth.clientId,
-    )
-
-    if (isAlreadyConnected) {
-      socket.emit("game:errorMessage", "Player already connected")
-
-      return
-    }
-
-    if (this.players.length >= Game.MAX_PLAYERS) {
-      socket.emit("game:errorMessage", "Game is full. Maximum players reached.")
-
-      return
-    }
-
     const result = usernameValidator.safeParse(username)
 
-    if (result.error) {
+    if (!result.success) {
       socket.emit("game:errorMessage", result.error.issues[0].message)
 
       return
     }
 
-    // Check for duplicate username (case-insensitive)
-    const isDuplicateName = this.players.some(
-      (p) => p.connected && p.username.toLowerCase() === username.toLowerCase(),
+    const trimmedUsername = username.trim()
+
+    // Disallow duplicate active or reconnectable usernames in the same game
+    const existingPlayer = this.players.find(
+      (p) => p.username.toLowerCase() === trimmedUsername.toLowerCase(),
     )
 
-    if (isDuplicateName) {
-      socket.emit("game:errorMessage", "Username is already taken. Choose a different one.")
+    if (existingPlayer) {
+      if (existingPlayer.connected) {
+        socket.emit("game:errorMessage", "Username is already taken")
 
-      return
+        return
+      }
+
+      // If player disconnected, require matching client ID to reclaim identity
+      const { clientId } = socket.handshake.auth
+
+      if (existingPlayer.clientId !== clientId) {
+        socket.emit("game:errorMessage", "Username belongs to a disconnected player")
+
+        return
+      }
     }
 
     socket.join(this.gameId)
@@ -165,7 +168,7 @@ class Game {
       id: socket.id,
       clientId: socket.handshake.auth.clientId,
       connected: true,
-      username,
+      username: trimmedUsername,
       points: 0,
     }
 
@@ -224,7 +227,7 @@ class Game {
 
     const status = this.managerStatus ||
       this.lastBroadcastStatus || {
-        name: STATUS.WAIT,
+        name: GAME_STATE.WAITING,
         data: { text: "Waiting for players" },
       }
 
@@ -265,7 +268,7 @@ class Game {
 
     const status = this.playerStatus.get(oldSocketId) ||
       this.lastBroadcastStatus || {
-        name: STATUS.WAIT,
+        name: GAME_STATE.WAITING,
         data: { text: "Waiting for players" },
       }
 
@@ -294,18 +297,15 @@ class Game {
   }
 
   startCooldown(seconds: number): Promise<void> {
-    if (this.cooldown.active) {
-      return Promise.resolve()
-    }
+    this.abortCooldown()
 
     this.cooldown.active = true
     let count = seconds - 1
 
     return new Promise<void>((resolve) => {
-      const cooldownTimeout = setInterval(() => {
+      this.cooldown.timer = setInterval(() => {
         if (!this.cooldown.active || count <= 0) {
-          this.cooldown.active = false
-          clearInterval(cooldownTimeout)
+          this.abortCooldown()
           resolve()
 
           return
@@ -318,7 +318,12 @@ class Game {
   }
 
   abortCooldown() {
-    this.cooldown.active &&= false
+    if (this.cooldown.timer) {
+      clearInterval(this.cooldown.timer)
+      this.cooldown.timer = undefined
+    }
+
+    this.cooldown.active = false
   }
 
   async start(socket: Socket) {
@@ -337,24 +342,34 @@ class Game {
     }
 
     this.started = true
+    const gen = this.incrementGeneration()
 
-    this.broadcastStatus(STATUS.SHOW_START, {
+    this.broadcastStatus(GAME_STATE.SHOW_START, {
       time: 3,
       subject: this.quizz.subject,
     })
 
     await sleep(3)
 
+    if (!this.isValidGeneration(gen)) {
+      return
+    }
+
     this.io.to(this.gameId).emit("game:startCooldown")
     await this.startCooldown(3)
+
+    if (!this.isValidGeneration(gen)) {
+      return
+    }
 
     this.newRound()
   }
 
   async newRound() {
+    const gen = this.incrementGeneration()
     const question = this.quizz.questions[this.round.currentQuestion]
 
-    if (!this.started) {
+    if (!this.started || !question) {
       return
     }
 
@@ -366,18 +381,18 @@ class Game {
     })
 
     this.managerStatus = null
-    this.broadcastStatus(STATUS.SHOW_PREPARED, {
+    this.broadcastStatus(GAME_STATE.SHOW_PREPARED, {
       totalAnswers: question.answers.length,
       questionNumber: this.round.currentQuestion + 1,
     })
 
     await sleep(2)
 
-    if (!this.started) {
+    if (!this.isValidGeneration(gen)) {
       return
     }
 
-    this.broadcastStatus(STATUS.SHOW_QUESTION, {
+    this.broadcastStatus(GAME_STATE.SHOW_QUESTION, {
       question: question.question,
       image: question.image,
       cooldown: question.cooldown,
@@ -385,13 +400,13 @@ class Game {
 
     await sleep(question.cooldown)
 
-    if (!this.started) {
+    if (!this.isValidGeneration(gen)) {
       return
     }
 
     this.round.startTime = Date.now()
 
-    this.broadcastStatus(STATUS.SELECT_ANSWER, {
+    this.broadcastStatus(GAME_STATE.SELECT_ANSWER, {
       type: question.type,
       question: question.question,
       answers: question.answers,
@@ -404,7 +419,7 @@ class Game {
 
     await this.startCooldown(question.time)
 
-    if (!this.started) {
+    if (!this.isValidGeneration(gen)) {
       return
     }
 
@@ -412,6 +427,8 @@ class Game {
   }
 
   showResults(question: any) {
+    this.currentState = GAME_STATE.SHOW_RESULT
+
     const oldLeaderboard =
       this.leaderboard.length === 0
         ? this.players.map((p) => ({ ...p }))
@@ -436,7 +453,11 @@ class Game {
 
         if (playerAnswer) {
           if (question.type === "type-answer") {
-            isCorrect = question.answers.some((a: string) => a.trim().toLowerCase() === String(playerAnswer.answerId).trim().toLowerCase())
+            isCorrect = question.answers.some(
+              (a: string) =>
+                a.trim().toLowerCase() ===
+                String(playerAnswer.answerId).trim().toLowerCase(),
+            )
           } else {
             isCorrect = playerAnswer.answerId === question.solution
           }
@@ -457,7 +478,7 @@ class Game {
       const rank = index + 1
       const aheadPlayer = sortedPlayers[index - 1]
 
-      this.sendStatus(player.id, STATUS.SHOW_RESULT, {
+      this.sendStatus(player.id, GAME_STATE.SHOW_RESULT, {
         correct: player.lastCorrect,
         message: player.lastCorrect ? "Nice!" : "Too bad",
         points: player.lastPoints,
@@ -467,11 +488,12 @@ class Game {
       })
     })
 
-    this.sendStatus(this.manager.id, STATUS.SHOW_RESPONSES, {
+    this.sendStatus(this.manager.id, GAME_STATE.SHOW_RESPONSES, {
       type: question.type,
       question: question.question,
       responses: totalType,
-      correct: question.type === "type-answer" ? question.answers : question.solution,
+      correct:
+        question.type === "type-answer" ? question.answers : question.solution,
       answers: question.answers,
       image: question.image,
     })
@@ -481,15 +503,26 @@ class Game {
 
     this.round.playersAnswers = []
   }
-  selectAnswer(socket: Socket, answerId: number | string) {
-    const player = this.players.find((player) => player.id === socket.id)
-    const question = this.quizz.questions[this.round.currentQuestion]
 
-    if (!player) {
+  selectAnswer(socket: Socket, answerId: number | string) {
+    // Answer submission allowed ONLY during SELECT_ANSWER phase
+    if (this.currentState !== GAME_STATE.SELECT_ANSWER) {
+      socket.emit("game:errorMessage", "Answers are not currently accepted")
+
       return
     }
 
-    if (this.round.playersAnswers.find((p) => p.playerId === socket.id)) {
+    const player = this.players.find((p) => p.id === socket.id)
+    const question = this.quizz.questions[this.round.currentQuestion]
+
+    if (!player || !question) {
+      return
+    }
+
+    // Check for duplicate answer submission
+    if (this.round.playersAnswers.some((p) => p.playerId === socket.id)) {
+      socket.emit("game:errorMessage", "Answer already submitted")
+
       return
     }
 
@@ -499,7 +532,7 @@ class Game {
       points: timeToPoint(this.round.startTime, question.time),
     })
 
-    this.sendStatus(socket.id, STATUS.WAIT, {
+    this.sendStatus(socket.id, GAME_STATE.WAIT, {
       text: "Waiting for the players to answer",
     })
 
@@ -508,18 +541,10 @@ class Game {
       .emit("game:playerAnswer", this.round.playersAnswers.length)
 
     this.io.to(this.gameId).emit("game:totalPlayers", this.players.length)
-
-    if (this.round.playersAnswers.length === this.players.length) {
-      // Early reveal disabled: timer will run to zero
-    }
   }
 
   nextRound(socket: Socket) {
-    if (!this.started) {
-      return
-    }
-
-    if (socket.id !== this.manager.id) {
+    if (!this.started || socket.id !== this.manager.id) {
       return
     }
 
@@ -532,15 +557,18 @@ class Game {
   }
 
   abortRound(socket: Socket) {
-    if (!this.started) {
+    if (!this.started || socket.id !== this.manager.id) {
       return
     }
 
-    if (socket.id !== this.manager.id) {
-      return
-    }
-
+    this.started = false
+    this.incrementGeneration()
     this.abortCooldown()
+
+    this.broadcastStatus(GAME_STATE.CANCELLED, {
+      reason: "Game aborted by manager",
+    })
+    this.io.to(this.gameId).emit("game:reset", "Game aborted by manager")
   }
 
   showLeaderboard() {
@@ -549,8 +577,9 @@ class Game {
 
     if (isLastRound) {
       this.started = false
+      this.incrementGeneration()
 
-      this.broadcastStatus(STATUS.FINISHED, {
+      this.broadcastStatus(GAME_STATE.FINISHED, {
         subject: this.quizz.subject,
         top: this.leaderboard.slice(0, 3),
       })
@@ -562,7 +591,7 @@ class Game {
       ? this.tempOldLeaderboard
       : this.leaderboard
 
-    this.sendStatus(this.manager.id, STATUS.SHOW_LEADERBOARD, {
+    this.sendStatus(this.manager.id, GAME_STATE.SHOW_LEADERBOARD, {
       oldLeaderboard: oldLeaderboard.slice(0, 5),
       leaderboard: this.leaderboard.slice(0, 5),
     })

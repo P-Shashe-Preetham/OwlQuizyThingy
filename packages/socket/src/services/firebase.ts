@@ -80,10 +80,15 @@ class FirebaseService {
     try {
       const snapshot = await this.db.collection("quizzes").get()
 
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as QuizzWithId[]
+      return snapshot.docs.map((doc) => {
+        const data = doc.data()
+
+        // Ensure internal data cannot overwrite canonical doc.id
+        return {
+          ...data,
+          id: doc.id,
+        } as QuizzWithId
+      })
     } catch (error) {
       console.error("Error fetching quizzes:", error)
 
@@ -97,14 +102,17 @@ class FirebaseService {
     }
 
     try {
-      const quizzId = id || uuid()
+      const quizzId = id || (quizz as any)?.id || uuid()
+
+      const quizzData = { ...quizz } as any
+      delete quizzData.id
 
       await this.db
         .collection("quizzes")
         .doc(quizzId)
         .set(
           {
-            ...quizz,
+            ...quizzData,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           },
           { merge: true },
