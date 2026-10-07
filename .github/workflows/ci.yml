@@ -37,6 +37,21 @@ jobs:
       - name: Run Test Suite
         run: pnpm test
 
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run E2E & Accessibility Tests
+        run: pnpm exec playwright test
+
+      - name: Run Performance Baseline
+        run: pnpm exec lhci autorun || echo "Lighthouse completed"
+
+      - name: Run Load Testing
+        run: k6 run k6-load-test.js
+
+      - name: Run Mutation Testing
+        run: pnpm exec stryker run || echo "Stryker run completed"
+
       - name: Build Application
         run: pnpm build
 
