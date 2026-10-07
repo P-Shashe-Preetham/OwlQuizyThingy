@@ -8,7 +8,6 @@ describe("Socket.IO Contract Testing", () => {
   })
 
   it("rejects invalid payloads with clear error messages", () => {
-    // Username too short
     const invalidLogin = { gameId: "game123", data: { username: "" } }
     const result = playerLoginSchema.safeParse(invalidLogin)
     expect(result.success).toBe(false)
