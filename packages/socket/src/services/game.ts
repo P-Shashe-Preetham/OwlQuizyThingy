@@ -121,7 +121,12 @@ class Game {
     name: K,
     data: StatusDataMap[K],
   ) {
-    this.playerStatus.set(socketId, { name, data })
+    if (socketId === this.manager.id) {
+      this.managerStatus = { name, data } as any
+    } else {
+      this.playerStatus.set(socketId, { name, data })
+    }
+
     this.io.to(socketId).emit("game:status", { name, data })
   }
 
@@ -267,6 +272,15 @@ class Game {
     const oldSocketId = player.id
     player.id = socket.id
     player.connected = true
+
+    // Update player's socket ID in current round's answers to prevent duplicate submissions
+    const answer = this.round.playersAnswers.find(
+      (a) => a.playerId === oldSocketId
+    )
+
+    if (answer) {
+      answer.playerId = socket.id
+    }
 
     const status = this.playerStatus.get(oldSocketId) ||
       this.lastBroadcastStatus || {
@@ -438,7 +452,7 @@ class Game {
     this.showResults(question)
   }
 
-  showResults(question: any) {
+  showResults(question: Quizz["questions"][number]) {
     this.currentState = GAME_STATE.SHOW_RESULT
 
     const oldLeaderboard =

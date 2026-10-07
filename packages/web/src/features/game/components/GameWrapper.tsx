@@ -11,7 +11,7 @@ import { useQuestionStore } from "@rahoot/web/features/game/stores/question"
 import { MANAGER_SKIP_BTN } from "@rahoot/web/features/game/utils/constants"
 import clsx from "clsx"
 import { type PropsWithChildren, useEffect, useState } from "react"
-import toast from "react-hot-toast"
+
 
 type Props = PropsWithChildren & {
   statusName: Status | undefined
@@ -25,6 +25,7 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
   const { questionStates, setQuestionStates } = useQuestionStore()
   const [isDisabled, setIsDisabled] = useState(false)
   const [bypassedLoader, setBypassedLoader] = useState(false)
+  const [gameError, setGameError] = useState<string | null>(null)
   const next = statusName ? MANAGER_SKIP_BTN[statusName] : null
 
   useEvent("game:updateQuestion", ({ current, total }) => {
@@ -35,7 +36,7 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
   })
 
   useEvent("game:errorMessage", (message) => {
-    toast.error(message)
+    setGameError(message)
     setIsDisabled(false)
   })
 
@@ -90,9 +91,25 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
           </div>
         ) : (
           <>
-            {!isConnected && statusName && (
-              <div className="z-50 flex items-center justify-center gap-2 bg-red-500/90 px-4 py-2 text-center text-sm font-bold text-white animate-pulse">
+            {(!isConnected && statusName) && (
+              <div role="alert" aria-live="assertive" className="z-50 flex items-center justify-center gap-2 bg-red-500/90 px-4 py-2 text-center text-sm font-bold text-white animate-pulse">
                 ⚠ Connection lost. Reconnecting...
+              </div>
+            )}
+            {gameError && (
+              <div role="alert" aria-live="assertive" className="z-50 flex items-center justify-between gap-4 bg-red-600/90 px-4 py-3 text-sm font-bold text-white shadow-md">
+                <div className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {gameError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setGameError(null)}
+                  className="text-white hover:text-gray-200 focus:outline-none"
+                  aria-label="Dismiss error"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </div>
             )}
 
