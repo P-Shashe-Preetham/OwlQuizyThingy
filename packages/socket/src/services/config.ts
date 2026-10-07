@@ -1,3 +1,4 @@
+import { logger } from "../lib/observability/logger"
 import { QuizzWithId } from "@rahoot/common/types/game"
 import { quizzSchema } from "@rahoot/common/validators/game"
 import fs from "fs"
@@ -19,7 +20,7 @@ function parseQuizFile(file: string): QuizzWithId | null {
     const validationResult = quizzSchema.safeParse(parsed)
 
     if (!validationResult.success) {
-      console.error(
+      logger.error(
         `⚠️ Malformed quiz file skipped: ${file}. Issues:`,
         validationResult.error.format(),
       )
@@ -35,7 +36,7 @@ function parseQuizFile(file: string): QuizzWithId | null {
       id,
     }
   } catch (fileError) {
-    console.error(`❌ Failed to read or parse quiz file ${file}:`, fileError)
+    logger.error(`❌ Failed to read or parse quiz file ${file}:`, fileError)
 
     return null
   }
@@ -117,7 +118,7 @@ class Config {
         const config = fs.readFileSync(getPath("game.json"), "utf-8")
         configObj = JSON.parse(config)
       } catch (error) {
-        console.error("Failed to read game config:", error)
+        logger.error("Failed to read game config:", error)
       }
     }
 
@@ -152,7 +153,7 @@ class Config {
 
       return quizzes
     } catch (error) {
-      console.error("Failed to read quizz directory:", error)
+      logger.error("Failed to read quizz directory:", error)
 
       return []
     }
