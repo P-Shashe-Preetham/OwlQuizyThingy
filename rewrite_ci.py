@@ -1,4 +1,6 @@
-name: OwlQuizThingy CI Pipeline
+import sys
+
+ci_yaml = """name: OwlQuizThingy CI Pipeline
 
 on:
   push:
@@ -133,3 +135,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: echo "Smoke testing production endpoint"
+"""
+
+with open(".github/workflows/ci.yml", "w") as f:
+    f.write(ci_yaml)
+
+print("ci.yml updated")
