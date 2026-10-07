@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import type { Quizz, QuizzWithId } from "@rahoot/common/types/game"
+import { quizzSchema } from "@rahoot/common/validators/game"
 import Triangle from "@rahoot/web/features/game/components/icons/Triangle"
 import Rhombus from "@rahoot/web/features/game/components/icons/Rhombus"
 import Circle from "@rahoot/web/features/game/components/icons/Circle"
@@ -37,6 +38,7 @@ const CreatorPage = () => {
   ])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [id, setId] = useState<string | undefined>(undefined)
+  const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (location.state?.quizz) {
@@ -84,6 +86,10 @@ const CreatorPage = () => {
   }, [subject, classicMode, theme, questions, isSaving])
 
   useEvent("manager:quizzSaved", ({ id: savedId, subject }) => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
+    }
+
     setIsSaving(false)
     localStorage.removeItem(`draft_quizz_${id || "new"}`)
     toast.success(`Quiz "${subject}" saved successfully!`)
@@ -94,6 +100,10 @@ const CreatorPage = () => {
   })
 
   useEvent("manager:errorMessage", (message) => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
+    }
+
     setIsSaving(false)
     toast.error(message)
   })
@@ -104,8 +114,6 @@ const CreatorPage = () => {
 
       return
     }
-
-    setIsSaving(true)
 
     const quizData: Quizz & { id?: string } = {
       ...(id ? { id } : {}),
@@ -119,6 +127,24 @@ const CreatorPage = () => {
         answers: q.answers.filter((a) => a.trim() !== ""),
       })),
     }
+
+    const parse = quizzSchema.safeParse(quizData)
+
+    if (!parse.success) {
+      toast.error(parse.error.issues[0].message)
+
+      return
+    }
+
+    setIsSaving(true)
+
+
+    const timeout = setTimeout(() => {
+      setIsSaving(false)
+      toast.error("Server took too long to respond")
+    }, 10000)
+
+    setSaveTimeout(timeout)
 
     socket.emit("manager:saveQuizz", quizData)
   }

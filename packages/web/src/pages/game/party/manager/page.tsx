@@ -50,6 +50,10 @@ const ManagerGamePage = () => {
     toast.error(message)
   })
 
+  useEvent("manager:errorMessage", (message) => {
+    toast.error(message)
+  })
+
   const handleSkip = () => {
     if (!gameId || !status) {
       return
