@@ -67,7 +67,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     let socketClient: TypedSocket | null = null
 
     try {
-      const serverUrl = import.meta.env.VITE_WS_URL || "/"
+      const serverUrl =
+        import.meta.env.VITE_WS_URL ||
+        (import.meta.env.PROD ? "https://owlquizythingy.onrender.com" : "/")
       socketClient = io(serverUrl, {
         path: "/ws",
         autoConnect: false,

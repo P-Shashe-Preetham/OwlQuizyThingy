@@ -6,6 +6,14 @@
   "outputDirectory": "packages/web/dist",
   "rewrites": [
     {
+      "source": "/ws/(.*)",
+      "destination": "https://owlquizythingy.onrender.com/ws/$1"
+    },
+    {
+      "source": "/ws",
+      "destination": "https://owlquizythingy.onrender.com/ws"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
