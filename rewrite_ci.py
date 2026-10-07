@@ -49,14 +49,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Integration tests mock (pass)"
+      - run: pnpm test
 
   contract:
     needs: integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Contract tests mock (pass)"
+      - run: pnpm test
 
   build:
     needs: contract
