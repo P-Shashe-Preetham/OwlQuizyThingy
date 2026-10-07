@@ -182,7 +182,9 @@ class Game {
   }
 
   kickPlayer(socket: Socket, playerId: string) {
-    if (this.manager.id !== socket.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (this.manager.clientId !== clientId) {
       return
     }
 
@@ -333,7 +335,9 @@ class Game {
   }
 
   async start(socket: Socket) {
-    if (this.manager.id !== socket.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (this.manager.clientId !== clientId) {
       return
     }
 
@@ -437,7 +441,7 @@ class Game {
     this.showResults(question)
   }
 
-  showResults(question: any) {
+  showResults(question: Quizz["questions"][number]) {
     this.currentState = GAME_STATE.SHOW_RESULT
 
     const oldLeaderboard =
@@ -578,7 +582,9 @@ return
   }
 
   nextRound(socket: Socket) {
-    if (!this.started || socket.id !== this.manager.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (!this.started || this.manager.clientId !== clientId) {
       return
     }
 
@@ -596,7 +602,9 @@ return
   }
 
   abortRound(socket: Socket) {
-    if (!this.started || socket.id !== this.manager.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (!this.started || this.manager.clientId !== clientId) {
       return
     }
 
@@ -610,7 +618,13 @@ return
     this.io.to(this.gameId).emit("game:reset", "Game aborted by manager")
   }
 
-  showLeaderboard() {
+  showLeaderboard(socket: Socket) {
+    const { clientId } = socket.handshake.auth
+
+    if (!this.started || clientId !== this.manager.clientId) {
+      return
+    }
+
     if (this.currentState !== GAME_STATE.SHOW_RESULT) {
       return
     }

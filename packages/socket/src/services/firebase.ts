@@ -35,7 +35,7 @@ class FirebaseService {
         return
       }
 
-      let serviceAccount: any = null
+      let serviceAccount: Record<string, unknown> | null = null
 
       try {
         // Try to parse as direct JSON first
@@ -72,6 +72,29 @@ class FirebaseService {
     return this.initialized
   }
 
+  async getQuiz(id: string): Promise<QuizzWithId | null> {
+    if (!this.db) {
+      return null
+    }
+
+    try {
+      const doc = await this.db.collection("quizzes").doc(id).get()
+
+      if (!doc.exists) {
+        return null
+      }
+
+      return {
+        ...doc.data(),
+        id: doc.id,
+      } as QuizzWithId
+    } catch (error) {
+      console.error("Error fetching quiz:", error)
+
+      return null
+    }
+  }
+
   async getQuizzes(): Promise<QuizzWithId[]> {
     if (!this.db) {
       return []
@@ -104,7 +127,7 @@ class FirebaseService {
     try {
       const quizzId = id || (quizz as any)?.id || uuid()
 
-      const quizzData = { ...quizz } as any
+      const quizzData = { ...quizz } as Record<string, unknown>
       delete quizzData.id
 
       await this.db

@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { trackEvent } from "./lib/analytics"
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import { Server } from "@rahoot/common/types/game/socket"
@@ -49,7 +50,9 @@ const httpServer = http.createServer((req, res) => {
   res.end()
 })
 
-const corsOrigin = process.env.CORS_ORIGIN || "*"
+const isProduction = process.env.NODE_ENV === "production"
+const defaultCors = isProduction ? "" : "*"
+const corsOrigin = process.env.CORS_ORIGIN || defaultCors
 
 const io: Server = new ServerIO(httpServer, {
   path: "/ws",
@@ -62,6 +65,24 @@ const io: Server = new ServerIO(httpServer, {
   pingTimeout: 10000,
 })
 
+
+// Validate client identifiers before connection
+io.use((socket, next) => {
+  const {clientId} = socket.handshake.auth
+
+  if (!clientId || typeof clientId !== "string") {
+    return next(new Error("Authentication error: Missing or invalid clientId"))
+  }
+
+  const parse = z.string().uuid().safeParse(clientId)
+
+  if (!parse.success) {
+    return next(new Error("Authentication error: Malformed clientId"))
+  }
+
+  return next()
+})
+
 Config.init()
 
 const registry = Registry.getInstance()
@@ -70,8 +91,8 @@ console.log(`Socket server running on port ${WS_PORT}`)
 httpServer.listen(WS_PORT)
 
 // Helper: check if socket is an authenticated manager
-function isAuthenticatedManager(socketId: string): boolean {
-  return authenticatedManagers.has(socketId)
+function isAuthenticatedManager(clientId: string): boolean {
+  return authenticatedManagers.has(clientId)
 }
 
 // Helper: rate limit check for auth attempts
@@ -111,9 +132,7 @@ async function getCombinedQuizList(): Promise<QuizzWithId[]> {
 }
 
 io.on("connection", (socket) => {
-  console.log(
-    `A user connected: socketId: ${socket.id}, clientId: ${socket.handshake.auth.clientId}`,
-  )
+  console.log(`A user connected: socketId: ${socket.id}`)
 
   socket.on("player:reconnect", (payload) => {
     const parse = gameIdSchema.safeParse(payload?.gameId)
@@ -172,7 +191,15 @@ io.on("connection", (socket) => {
       }
 
       // Rate limiting
-      const ip = socket.handshake.address
+      // To safely trust proxies, Socket.IO typically requires `trust proxy` in the HTTP server.
+      // Or we can rely on the connection's direct IP, as `x-forwarded-for` can be spoofed trivially
+      // unless we know for certain we're behind a trusted load balancer stripping it.
+      // Since Render terminates SSL and forwards headers safely, we can check it.
+      // However, to be perfectly secure against arbitrary X-Forwarded-For injection,
+      // it's safer to use the connection's remote address if trust is unverified,
+      // or rely on Render's specific headers if available (like True-Client-IP).
+
+      const ip = socket.handshake.address || "unknown"
 
       if (isRateLimited(ip)) {
         socket.emit(
@@ -185,7 +212,9 @@ io.on("connection", (socket) => {
 
       const config = Config.game()
 
-      if (!config.managerPassword || config.managerPassword === "PASSWORD") {
+      const weakPasswords = ["admin123", "PASSWORD", "password", "12345678"]
+
+      if (!config.managerPassword || weakPasswords.includes(config.managerPassword)) {
         socket.emit(
           "manager:errorMessage",
           "Manager password is not configured",
@@ -201,9 +230,9 @@ io.on("connection", (socket) => {
         return
       }
 
-      // Mark this socket as authenticated manager
-      authenticatedManagers.add(socket.id)
-      trackEvent("manager_auth_success", { socketId: socket.id })
+      // Mark this client as authenticated manager
+      authenticatedManagers.add(socket.handshake.auth.clientId)
+      trackEvent("manager_auth_success", { clientId: socket.handshake.auth.clientId, socketId: socket.id })
 
       const combinedQuizzList = await getCombinedQuizList()
 
@@ -215,7 +244,9 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:saveQuizz", async (quizz) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    const {clientId} = socket.handshake.auth
+
+    if (!isAuthenticatedManager(clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -232,20 +263,49 @@ io.on("connection", (socket) => {
       return
     }
 
-    try {
-      if (FirebaseService.isInitialized()) {
-        const id = await FirebaseService.saveQuizz(
-          parse.data,
-          (quizz as any)?.id,
-        )
+    const quizId = (quizz as { id?: string })?.id
 
-        socket.emit("manager:quizzSaved", { id, subject: parse.data.subject })
-      } else {
-        socket.emit(
-          "manager:errorMessage",
-          "Firebase not configured. Quiz not saved.",
-        )
+    // Default quizzes shouldn't be overriden
+    const localQuizzes = Config.quizz()
+
+    if (quizId && localQuizzes.some((q) => q.id === quizId)) {
+        socket.emit("manager:errorMessage", "Cannot overwrite default quizzes")
+
+
+return
+    }
+
+    if (!FirebaseService.isInitialized()) {
+      socket.emit(
+        "manager:errorMessage",
+        "Firebase not configured. Quiz not saved.",
+      )
+
+      return
+    }
+
+    try {
+      if (quizId) {
+        const existingQuiz = await FirebaseService.getQuiz(quizId)
+
+        if (existingQuiz && existingQuiz.ownerId && existingQuiz.ownerId !== clientId) {
+           socket.emit("manager:errorMessage", "You do not have permission to edit this quiz")
+
+           return
+        }
       }
+
+      const dataToSave = {
+          ...parse.data,
+          ownerId: clientId
+      }
+
+      const id = await FirebaseService.saveQuizz(
+        dataToSave,
+        quizId,
+      )
+
+      socket.emit("manager:quizzSaved", { id, subject: parse.data.subject })
     } catch (error) {
       console.error("Failed to save quiz:", error)
       socket.emit("manager:errorMessage", "Failed to save quiz")
@@ -253,7 +313,9 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:deleteQuizz", async (id) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    const {clientId} = socket.handshake.auth
+
+    if (!isAuthenticatedManager(clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -269,6 +331,15 @@ io.on("connection", (socket) => {
 
     try {
       if (FirebaseService.isInitialized()) {
+        const existingQuiz = await FirebaseService.getQuiz(parse.data)
+
+        if (existingQuiz && existingQuiz.ownerId && existingQuiz.ownerId !== clientId) {
+             socket.emit("manager:errorMessage", "You do not have permission to delete this quiz")
+
+
+return
+        }
+
         await FirebaseService.deleteQuizz(parse.data)
       }
 
@@ -283,7 +354,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("game:create", async (quizzId) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    if (!isAuthenticatedManager(socket.handshake.auth.clientId)) {
       socket.emit(
         "game:errorMessage",
         "Unauthorized. Please authenticate first.",
@@ -371,7 +442,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:kickPlayer", (payload) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    if (!isAuthenticatedManager(socket.handshake.auth.clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -391,7 +462,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:startGame", (payload) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    if (!isAuthenticatedManager(socket.handshake.auth.clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -423,7 +494,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:abortQuiz", (payload) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    if (!isAuthenticatedManager(socket.handshake.auth.clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -441,7 +512,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:nextQuestion", (payload) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    if (!isAuthenticatedManager(socket.handshake.auth.clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -459,7 +530,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("manager:showLeaderboard", (payload) => {
-    if (!isAuthenticatedManager(socket.id)) {
+    if (!isAuthenticatedManager(socket.handshake.auth.clientId)) {
       socket.emit("manager:errorMessage", "Unauthorized")
 
       return
@@ -473,12 +544,12 @@ io.on("connection", (socket) => {
       return
     }
 
-    withGame(parse.data, socket, (game) => game.showLeaderboard())
+    withGame(parse.data, socket, (game) => game.showLeaderboard(socket))
   })
 
   socket.on("disconnect", () => {
-    // Clean up authenticated manager tracking
-    authenticatedManagers.delete(socket.id)
+    // We intentionally do NOT delete authenticatedManagers.delete(socket.handshake.auth.clientId)
+    // so that managers can reconnect without re-authenticating within their session.
 
     const managerGame = registry.getGameByManagerSocketId(socket.id)
 

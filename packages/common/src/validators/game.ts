@@ -1,21 +1,30 @@
 import z from "zod"
 
-export const managerAuthSchema = z.string().min(1, "Password is required")
+export const managerAuthSchema = z.string().min(8, "Password must be at least 8 characters")
 
 export const questionAnswerSchema = z.object({
   type: z.enum(["quiz", "type-answer"]).optional(),
-  question: z.string().min(1, "Question text cannot be empty"),
-  image: z.string().url("Invalid image URL").optional().or(z.literal("")),
-  video: z.string().url("Invalid video URL").optional().or(z.literal("")),
-  audio: z.string().url("Invalid audio URL").optional().or(z.literal("")),
-  answers: z.array(z.string()).min(2, "At least two answers required"),
+  question: z.string().min(1, "Question text cannot be empty").max(1000, "Question too long"),
+  image: z.string().max(2048, "URL too long").url("Invalid image URL").optional().or(z.literal("")),
+  video: z.string().max(2048, "URL too long").url("Invalid video URL").optional().or(z.literal("")),
+  audio: z.string().max(2048, "URL too long").url("Invalid audio URL").optional().or(z.literal("")),
+  answers: z.array(z.string().max(500, "Answer too long")).min(2, "At least two answers required").max(10, "Too many answers"),
   solution: z.number().int().nonnegative(),
-  cooldown: z.number().int().positive().default(5),
-  time: z.number().int().positive().default(15),
+  cooldown: z.number().int().positive().max(60, "Cooldown too long").default(5),
+  time: z.number().int().positive().max(300, "Time too long").default(15),
+}).superRefine((data, ctx) => {
+  if (data.type !== "type-answer" && data.solution >= data.answers.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Solution index out of bounds",
+      path: ["solution"]
+    })
+  }
 })
 
 export const quizzSchema = z.object({
   subject: z.string().min(1, "Subject cannot be empty"),
+  ownerId: z.string().optional(),
   settings: z
     .object({
       theme: z.string().optional(),
