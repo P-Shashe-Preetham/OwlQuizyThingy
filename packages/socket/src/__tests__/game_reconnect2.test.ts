@@ -95,7 +95,7 @@ describe("Game Complete Test Matrix", () => {
     expect(isCooldownActive).toBe(false)
   })
 
-  it("does not start with zero players", async () => {
+  it("does not start with zero players", () => {
     const game = new Game(mockIo, mockSocket, mockQuiz as any)
 
     game.start(mockSocket)
@@ -103,7 +103,7 @@ describe("Game Complete Test Matrix", () => {
     expect(mockSocket.emit).toHaveBeenCalledWith("game:errorMessage", "No players connected")
   })
 
-  it("cannot start twice", async () => {
+  it("cannot start twice", () => {
     const game = new Game(mockIo, mockSocket, mockQuiz as any)
     game.players = [{ id: "p1", clientId: "c1", connected: true, username: "player1", points: 0 }]
 
@@ -114,7 +114,7 @@ describe("Game Complete Test Matrix", () => {
     expect(mockIo.to).not.toHaveBeenCalledWith("game:status", expect.any(Object))
   })
 
-  it("ignores answers after timeout", async () => {
+  it("ignores answers after timeout", () => {
     const game = new Game(mockIo, mockSocket, mockQuiz as any)
     game.players = [{ id: "p1", clientId: "c1", connected: true, username: "player1", points: 0 }]
     // Not SELECT_ANSWER
