@@ -8,6 +8,18 @@
     ],
     "rewrites": [
       {
+        "source": "/ws/**",
+        "run": {
+          "serviceId": "rahoot-socket"
+        }
+      },
+      {
+        "source": "/health",
+        "run": {
+          "serviceId": "rahoot-socket"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

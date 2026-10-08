@@ -1,4 +1,5 @@
-import { trackEvent } from "./lib/analytics"
+import { logger } from "./lib/observability/logger"
+import { metrics } from "./lib/observability/metrics"
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import { Server } from "@rahoot/common/types/game/socket"
 import {
@@ -31,7 +32,7 @@ const authAttempts = new Map<string, { count: number; resetAt: number }>()
 const authenticatedManagers = new Set<string>()
 
 const httpServer = http.createServer((req, res) => {
-  if (req.url === "/health") {
+  if (req.url === "/health" || req.url === "/health/live") {
     res.writeHead(200, { "Content-Type": "application/json" })
     res.end(
       JSON.stringify({
@@ -42,7 +43,24 @@ const httpServer = http.createServer((req, res) => {
       }),
     )
 
-    return
+
+return
+  }
+
+  if (req.url === "/health/ready") {
+    const isFirebaseConfigured = Boolean(process.env.FIREBASE_SERVICE_ACCOUNT)
+    const isFirebaseReady = isFirebaseConfigured ? FirebaseService.isInitialized() : true
+
+    if (isFirebaseReady) {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ status: "ready" }))
+    } else {
+      res.writeHead(503, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ status: "unavailable", reason: "Firebase initializing" }))
+    }
+
+
+return
   }
 
   res.writeHead(404)
@@ -66,7 +84,7 @@ Config.init()
 
 const registry = Registry.getInstance()
 
-console.log(`Socket server running on port ${WS_PORT}`)
+logger.info(`Socket server running on port ${WS_PORT}`)
 httpServer.listen(WS_PORT)
 
 // Helper: check if socket is an authenticated manager
@@ -111,7 +129,7 @@ async function getCombinedQuizList(): Promise<QuizzWithId[]> {
 }
 
 io.on("connection", (socket) => {
-  console.log(
+  logger.info(
     `A user connected: socketId: ${socket.id}, clientId: ${socket.handshake.auth.clientId}`,
   )
 
@@ -201,20 +219,20 @@ io.on("connection", (socket) => {
 
       if (parse.data !== config.managerPassword) {
         socket.emit("manager:errorMessage", "Invalid password")
-        trackEvent("manager_auth_failure", { reason: "invalid_password", ip: socket.handshake.address })
+        metrics.managerAuthFailure("invalid_password", socket.handshake.address)
 
         return
       }
 
       // Mark this socket as authenticated manager
       authenticatedManagers.add(socket.id)
-      trackEvent("manager_auth_success", { socketId: socket.id })
+      metrics.managerAuthSuccess(socket.id)
 
       const combinedQuizzList = await getCombinedQuizList()
 
       socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
-      console.error("Failed to read game config:", error)
+      logger.error("Failed to read game config:", { error })
       socket.emit("manager:errorMessage", "Failed to read game config")
     }
   })
@@ -252,7 +270,7 @@ io.on("connection", (socket) => {
         )
       }
     } catch (error) {
-      console.error("Failed to save quiz:", error)
+      logger.error("Failed to save quiz:", { error })
       socket.emit("manager:errorMessage", "Failed to save quiz")
     }
   })
@@ -282,7 +300,7 @@ io.on("connection", (socket) => {
 
       socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
-      console.error("Failed to delete quiz:", error)
+      logger.error("Failed to delete quiz:", { error })
       socket.emit("manager:errorMessage", "Failed to delete quiz")
     }
   })
@@ -337,7 +355,7 @@ io.on("connection", (socket) => {
     const game = new Game(io, socket, quizz)
 
     registry.addGame(game)
-    trackEvent("game_created", { gameId: game.gameId, quizzId: parse.data })
+    metrics.gameCreated(game.gameId, parse.data)
   })
 
   socket.on("player:join", (inviteCode) => {
@@ -358,7 +376,7 @@ io.on("connection", (socket) => {
     }
 
     socket.emit("game:successRoom", game.gameId)
-    trackEvent("player_joined_room", { gameId: game.gameId, socketId: socket.id })
+    metrics.playerJoined(game.gameId, socket.id)
   })
 
   socket.on("player:login", (payload) => {
@@ -526,21 +544,26 @@ io.on("connection", (socket) => {
 })
 
 
-async function gracefulShutdown(signal: string) {
-  console.log(`Received ${signal}. Shutting down gracefully...`)
-  await trackEvent("server_shutdown", { signal })
+function gracefulShutdown(signal: string) {
+  logger.info(`Received ${signal}. Shutting down gracefully...`, { signal })
+  metrics.serverShutdown(signal)
 
   // Notify all connected clients
   io.emit("game:reset", "Server is shutting down for maintenance")
+
+  // Force stop all active games to clear timers/cooldowns
+  for (const game of registry.getAllGames()) {
+    game.abortCooldown()
+  }
 
   // Close sockets
   io.disconnectSockets()
 
   // Give time for messages to be sent
   setTimeout(() => {
-    Registry.getInstance().cleanup()
+    registry.cleanup()
     httpServer.close((err) => {
-      console.log("HTTP server closed")
+      logger.info("HTTP server closed", { error: err })
       process.exit(err ? 1 : 0)
     })
   }, 1000)

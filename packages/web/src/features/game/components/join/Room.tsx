@@ -1,3 +1,4 @@
+import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import Button from "@rahoot/web/shared/components/Button"
 import Form from "@rahoot/web/shared/components/Form"
 import Input from "@rahoot/web/shared/components/Input"
@@ -22,6 +23,7 @@ const Room = () => {
 
     setIsLoading(true)
     socket?.emit("player:join", invitation.trim())
+    trackEvent("join_started", { pin: invitation.trim() })
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
