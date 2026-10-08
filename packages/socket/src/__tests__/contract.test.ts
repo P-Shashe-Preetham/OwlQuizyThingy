@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest"
-
 import { playerLoginSchema } from "../../../common/src/validators/game"
 
 describe("Socket.IO Contract Testing", () => {
@@ -17,6 +16,7 @@ describe("Socket.IO Contract Testing", () => {
       gameId: "game123",
       data: { username: "" },
     }
+
     const result = playerLoginSchema.safeParse(invalidLogin)
 
     expect(result.success).toBe(false)

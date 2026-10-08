@@ -50,7 +50,7 @@ class FirebaseService {
         return
       }
 
-      let serviceAccount: unknown = null
+      let serviceAccount: unknown
 
       try {
         serviceAccount = JSON.parse(serviceAccountVar)
