@@ -1,4 +1,5 @@
 import fetch from "node-fetch"
+import { logger } from "./observability/logger"
 
 export async function trackEvent(eventName: string, data: Record<string, any> = {}) {
   const token = process.env.TINYBIRD_TOKEN
@@ -25,7 +26,7 @@ export async function trackEvent(eventName: string, data: Record<string, any> = 
       body: JSON.stringify(payload),
       timeout: 2000,
     })
-  } catch (err) {
-    console.error("Telemetry error (ignored):", err)
+  } catch (err: any) {
+    logger.warn("Telemetry error (ignored)", { error: err?.message || err })
   }
 }

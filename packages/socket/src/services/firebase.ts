@@ -1,3 +1,4 @@
+import { logger } from "../lib/observability/logger"
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
 import admin from "firebase-admin"
 import { v4 as uuid } from "uuid"
@@ -28,7 +29,7 @@ class FirebaseService {
       const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT
 
       if (!serviceAccountVar) {
-        console.warn(
+        logger.warn(
           "⚠️ FIREBASE_SERVICE_ACCOUNT not found. Firebase features will be disabled.",
         )
 
@@ -48,7 +49,7 @@ class FirebaseService {
           )
           serviceAccount = JSON.parse(decoded)
         } catch {
-          console.error(
+          logger.error(
             "❌ Failed to parse FIREBASE_SERVICE_ACCOUNT as JSON or Base64.",
           )
 
@@ -62,9 +63,9 @@ class FirebaseService {
 
       this.db = admin.firestore()
       this.initialized = true
-      console.log("🚀 Firebase Firestore initialized successfully.")
+      logger.info("🚀 Firebase Firestore initialized successfully.")
     } catch (error) {
-      console.error("❌ Firebase initialization failed:", error)
+      logger.error("❌ Firebase initialization failed:", { error })
     }
   }
 
@@ -90,7 +91,7 @@ class FirebaseService {
         } as QuizzWithId
       })
     } catch (error) {
-      console.error("Error fetching quizzes:", error)
+      logger.error("Error fetching quizzes:", { error })
 
       return []
     }
@@ -118,11 +119,11 @@ class FirebaseService {
           { merge: true },
         )
 
-      console.log(`Saved quiz: ${quizz.subject} (${quizzId})`)
+      logger.info(`Saved quiz: ${quizz.subject} (${quizzId})`)
 
       return quizzId
     } catch (error) {
-      console.error("Error saving quiz:", error)
+      logger.error("Error saving quiz:", { error })
       throw error
     }
   }
