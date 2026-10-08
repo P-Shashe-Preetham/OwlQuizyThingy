@@ -1,4 +1,6 @@
-# OwlQuizyThingy
+import sys
+
+readme_content = """# OwlQuizyThingy
 
 **OwlQuizyThingy** is a real-time, interactive quiz platform designed for live classroom and group game sessions. Inspired by live quiz engines, it features real-time Socket.IO synchronization, instant scoring, leaderboards, quiz creation/editing, and persistent storage via Firebase Firestore or local JSON configuration.
 
@@ -151,3 +153,9 @@ Please refer to our [SECURITY.md](SECURITY.md) for detailed guidelines.
 
 - **Horizontal Scaling**: The `Socket Server` currently holds game state completely in memory. It cannot be horizontally scaled without introducing a distributed pub/sub system (e.g., Redis).
 - **Session Persistence**: If the socket server restarts, all active game sessions and player connections are lost.
+"""
+
+with open("README.md", "w") as f:
+    f.write(readme_content)
+
+print("README.md updated.")
