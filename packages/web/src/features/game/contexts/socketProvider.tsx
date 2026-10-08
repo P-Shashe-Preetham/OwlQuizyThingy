@@ -54,22 +54,24 @@ const getClientId = (): string => {
 }
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
+  const socketRef = React.useRef<TypedSocket | null>(null)
   const [socket, setSocket] = useState<TypedSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [clientId] = useState<string>(() => getClientId())
 
   useEffect(() => {
-    if (socket) {
+    let isMounted = true
+
+    if (socketRef.current) {
       return
     }
 
     let socketClient: TypedSocket | null = null
 
     try {
-      const serverUrl =
-        import.meta.env.VITE_WS_URL || "/"
-      socketClient = io(serverUrl, {
+      const serverUrl = import.meta.env.VITE_WS_URL || "/"
+      socketRef.current = io(serverUrl, {
         path: "/ws",
         autoConnect: false,
         reconnection: true,
@@ -79,33 +81,43 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           clientId,
         },
       })
+      socketClient = socketRef.current
 
-      setSocket(socketClient)
+      if (isMounted) {setSocket(socketClient)}
 
       socketClient.on("connect", () => {
-        setIsConnected(true)
-        setConnectionError(null)
+        if (isMounted) {setIsConnected(true)}
+
+        if (isMounted) {setConnectionError(null)}
       })
 
       socketClient.on("disconnect", () => {
-        setIsConnected(false)
+        if (isMounted) {setIsConnected(false)}
       })
 
       socketClient.on("connect_error", (err) => {
         console.error("Connection error:", err.message)
-        setIsConnected(false)
-        setConnectionError(
+
+        if (isMounted) {setIsConnected(false)}
+
+        if (isMounted) {setConnectionError(
           `Could not connect to WebSocket backend server (${serverUrl}). Ensure @rahoot/socket server is running and VITE_WS_URL is configured.`,
-        )
+        )}
       })
     } catch (error) {
       console.error("Failed to initialize socket:", error)
-      setConnectionError("Failed to initialize Socket connection.")
+
+      if (isMounted) {setConnectionError("Failed to initialize Socket connection.")}
     }
 
     // eslint-disable-next-line consistent-return
     return () => {
-      socketClient?.disconnect()
+      isMounted = false
+
+      if (socketRef.current) {
+        socketRef.current.disconnect()
+        socketRef.current = null
+      }
     }
   }, [clientId])
 

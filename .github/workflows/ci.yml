@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -23,9 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r exec tsc --noEmit
@@ -35,9 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
@@ -47,24 +47,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4.0.0
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4.0.2
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium firefox webkit
       - name: Run E2E & Accessibility Tests
-        run: pnpm exec playwright test
+        run: pnpm run build && pnpm exec playwright test
 
   performance:
     needs: unit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4.0.0
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4.0.2
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - name: Run Performance Baseline
@@ -75,9 +77,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4.0.0
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4.0.2
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - name: Run Load Testing
@@ -88,9 +90,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4.0.0
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4.0.2
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - name: Run Mutation Testing
@@ -110,13 +112,13 @@ jobs:
       - run: echo "Contract tests mock (pass)"
 
   build:
-    needs: contract
+    needs: e2e-and-accessibility
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v4
         with: { version: "10.30.3" }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -178,11 +180,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Deploy to Render/Vercel via CLI or webhook"
+      - uses: pnpm/action-setup@v4
+        with: { version: "10.30.3" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: "pnpm" }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: rahoot-36025
+          channelId: live
 
   smoke-test:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Smoke testing production endpoint"
+      - uses: pnpm/action-setup@v4
+        with: { version: "10.30.3" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: "pnpm" }
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+      - name: Run E2E Smoke Tests against Prod
+        run: PLAYWRIGHT_TEST_BASE_URL=https://rahoot-36025.web.app pnpm exec playwright test
