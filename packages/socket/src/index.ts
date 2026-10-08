@@ -190,7 +190,12 @@ io.on("connection", (socket) => {
       }
 
       // Rate limiting
-      const ip = socket.handshake.address
+      const forwarded = socket.handshake.headers["x-forwarded-for"]
+      // To safely trust proxies, Socket.IO typically requires `trust proxy` in the HTTP server.
+      // But if we're deployed on a trusted platform (like Render), we might rely on the header,
+      // provided we handle spoofing. For strict security, if we can't verify the proxy,
+      // we fallback to the socket connection IP.
+      const ip = (typeof forwarded === "string" ? forwarded.split(",")[0].trim() : socket.handshake.address) || "unknown"
 
       if (isRateLimited(ip)) {
         socket.emit(
@@ -491,7 +496,7 @@ io.on("connection", (socket) => {
       return
     }
 
-    withGame(parse.data, socket, (game) => game.showLeaderboard())
+    withGame(parse.data, socket, (game) => game.showLeaderboard(socket))
   })
 
   socket.on("disconnect", () => {
