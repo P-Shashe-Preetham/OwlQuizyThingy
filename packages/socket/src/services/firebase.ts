@@ -1,7 +1,21 @@
 import { logger } from "../lib/observability/logger"
 import { Quizz, QuizzWithId } from "@rahoot/common/types/game"
+import { quizzSchema } from "@rahoot/common/validators/game"
 import admin from "firebase-admin"
 import { v4 as uuid } from "uuid"
+
+const quizzConverter: admin.firestore.FirestoreDataConverter<Quizz> = {
+  toFirestore(quizz: Quizz): admin.firestore.DocumentData {
+    return {
+      ...quizz,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+  },
+
+  fromFirestore(snapshot: admin.firestore.QueryDocumentSnapshot): Quizz {
+    return snapshot.data() as Quizz
+  },
+}
 
 class FirebaseService {
   private static instance: FirebaseService
@@ -23,34 +37,33 @@ class FirebaseService {
       try {
         process.loadEnvFile("../../.env")
       } catch {
-        // Ignored
+        // Local .env loading is optional.
       }
 
       const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT
 
       if (!serviceAccountVar) {
         logger.warn(
-          "⚠️ FIREBASE_SERVICE_ACCOUNT not found. Firebase features will be disabled.",
+          "FIREBASE_SERVICE_ACCOUNT not found. Firebase features will be disabled.",
         )
 
         return
       }
 
-      let serviceAccount: any = null
+      let serviceAccount: unknown
 
       try {
-        // Try to parse as direct JSON first
         serviceAccount = JSON.parse(serviceAccountVar)
       } catch {
         try {
-          // If not JSON, try to decode as Base64
           const decoded = Buffer.from(serviceAccountVar, "base64").toString(
             "utf-8",
           )
+
           serviceAccount = JSON.parse(decoded)
         } catch {
           logger.error(
-            "❌ Failed to parse FIREBASE_SERVICE_ACCOUNT as JSON or Base64.",
+            "Failed to parse FIREBASE_SERVICE_ACCOUNT as JSON or Base64.",
           )
 
           return
@@ -58,14 +71,17 @@ class FirebaseService {
       }
 
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(
+          serviceAccount as admin.ServiceAccount,
+        ),
       })
 
       this.db = admin.firestore()
       this.initialized = true
-      logger.info("🚀 Firebase Firestore initialized successfully.")
+
+      logger.info("Firebase Firestore initialized successfully.")
     } catch (error) {
-      logger.error("❌ Firebase initialization failed:", { error })
+      logger.error("Firebase initialization failed.", { error })
     }
   }
 
@@ -79,19 +95,33 @@ class FirebaseService {
     }
 
     try {
-      const snapshot = await this.db.collection("quizzes").get()
+      const snapshot = await this.db
+        .collection("quizzes")
+        .withConverter(quizzConverter)
+        .get()
 
-      return snapshot.docs.map((doc) => {
+      const quizzes: QuizzWithId[] = []
+
+      for (const doc of snapshot.docs) {
         const data = doc.data()
+        const validationResult = quizzSchema.safeParse(data)
 
-        // Ensure internal data cannot overwrite canonical doc.id
-        return {
-          ...data,
-          id: doc.id,
-        } as QuizzWithId
-      })
+        if (validationResult.success) {
+          quizzes.push({
+            ...validationResult.data,
+            id: doc.id,
+          })
+        } else {
+          logger.warn("Malformed quiz document in Firestore skipped.", {
+            documentId: doc.id,
+            issues: validationResult.error.issues,
+          })
+        }
+      }
+
+      return quizzes
     } catch (error) {
-      logger.error("Error fetching quizzes:", { error })
+      logger.error("Error fetching quizzes from Firestore.", { error })
 
       return []
     }
@@ -102,38 +132,51 @@ class FirebaseService {
       throw new Error("Firebase not initialized")
     }
 
-    try {
-      const quizzId = id || (quizz as any)?.id || uuid()
+    const validationResult = quizzSchema.safeParse(quizz)
 
-      const quizzData = { ...quizz } as any
-      delete quizzData.id
+    if (!validationResult.success) {
+      throw new Error(
+        `Invalid quiz schema: ${validationResult.error.issues[0]?.message ?? "Invalid quiz"}`,
+      )
+    }
+
+    try {
+      const quizzId = id || uuid()
 
       await this.db
         .collection("quizzes")
+        .withConverter(quizzConverter)
         .doc(quizzId)
-        .set(
-          {
-            ...quizzData,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true },
-        )
+        .set(quizz, { merge: true })
 
       logger.info(`Saved quiz: ${quizz.subject} (${quizzId})`)
 
       return quizzId
     } catch (error) {
-      logger.error("Error saving quiz:", { error })
-      throw error
+      logger.error("Error saving quiz to Firestore.", { error })
+
+      throw new Error("Failed to save quiz to Firestore")
     }
   }
 
   async deleteQuizz(id: string): Promise<void> {
     if (!this.db) {
-      return
+      throw new Error("Firebase not initialized")
     }
 
-    await this.db.collection("quizzes").doc(id).delete()
+    if (!id || typeof id !== "string") {
+      throw new Error("Invalid quiz ID for deletion")
+    }
+
+    try {
+      await this.db.collection("quizzes").doc(id).delete()
+
+      logger.info(`Deleted quiz: ${id}`)
+    } catch (error) {
+      logger.error("Error deleting quiz from Firestore.", { error })
+
+      throw new Error("Failed to delete quiz from Firestore")
+    }
   }
 }
 
