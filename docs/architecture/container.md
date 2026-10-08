@@ -1,40 +1,46 @@
-# Architecture Container Model
+# Container Architecture
+
+## Overview
+
+The **Container Architecture** document breaks down OwlQuizyThingy into its independently executable subsystems and shows how they communicate.
+
+## Container Diagram
+
+```mermaid
+C4Container
+    title Container diagram for OwlQuizyThingy
+
+    Person(manager, "Quiz Manager", "Creates and hosts quizzes.")
+    Person(player, "Quiz Player", "Joins and plays quizzes.")
+
+    System_Boundary(c1, "OwlQuizyThingy") {
+        Container(webApp, "Web Application", "React, Vite, Tailwind CSS", "Delivers the user interface for both Managers and Players. Communicates via REST and WebSockets.")
+        Container(socketServer, "Socket Server", "Node.js, Socket.IO", "Maintains in-memory game state, handles real-time events, validates payloads, and authenticates managers.")
+        Container(localConfig, "Local Config", "JSON", "Optional local persistent storage fallback.")
+    }
+
+    System_Ext(firebase, "Firebase (Firestore)", "Stores quiz configurations.")
+
+    Rel(manager, webApp, "Visits", "HTTPS")
+    Rel(player, webApp, "Visits", "HTTPS")
+
+    Rel(webApp, socketServer, "Real-time state sync", "WSS")
+
+    Rel(socketServer, firebase, "Reads/Writes quizzes", "HTTPS/gRPC")
+    Rel(socketServer, localConfig, "Reads config", "File I/O")
+```
 
 ## Containers
 
-### 1. Web Application (`@rahoot/web`)
-*   **Technology:** React 19, Vite, Tailwind CSS, Zustand, React Router, Socket.IO Client.
-*   **Purpose:** Provides the user interface for both Managers and Players. It maintains client-side state using Zustand and handles routing and rendering.
-*   **Responsibilities:**
-    *   Presenting the login/join screens.
-    *   Displaying the creator interface for quiz management.
-    *   Rendering live game states (questions, answers, leaderboards).
-    *   Communicating with the Socket Server via WebSockets.
+1. **Web Application (`@rahoot/web`)**:
+   - A single-page application (SPA) built in React 19.
+   - Hosted statically or via a lightweight Nginx container.
+   - Manages client-side state using Zustand and interacts with the backend strictly through Socket.IO.
 
-### 2. Socket Server (`@rahoot/socket`)
-*   **Technology:** Node.js, Socket.IO, Zod.
-*   **Purpose:** The central authority for real-time game logic, state management, and persistence integration.
-*   **Responsibilities:**
-    *   Handling WebSocket connections from the Web Application.
-    *   Managing in-memory game state (`Registry`, `Game` instances).
-    *   Validating incoming events using Zod schemas (defined in `@rahoot/common`).
-    *   Authenticating managers.
-    *   Interfacing with persistence layers (Firebase or Local JSON).
+2. **Socket Server (`@rahoot/socket`)**:
+   - The authoritative backend running on Node.js.
+   - Uses Socket.IO for duplex communication.
+   - Enforces business logic and state machine transitions entirely in-memory.
 
-### 3. Shared Library (`@rahoot/common`)
-*   **Technology:** TypeScript, Zod.
-*   **Purpose:** Enforces strong typing and runtime validation boundaries between the Web App and Socket Server.
-*   **Responsibilities:**
-    *   Defining shared domain models (Quizz, Player, GameState).
-    *   Providing Zod validation schemas.
-    *   Defining the exact Socket.IO event contracts.
-
-### 4. Firebase Firestore (Optional)
-*   **Technology:** Google Firebase Firestore.
-*   **Purpose:** Cloud-based NoSQL persistence for created quizzes.
-*   **Responsibilities:**
-    *   Storing quiz definitions securely.
-
-### 5. Local JSON Config (Fallback)
-*   **Technology:** File System (JSON).
-*   **Purpose:** Fallback persistence for quizzes when Firebase is not configured.
+3. **Local Config**:
+   - For environments lacking Firebase, a local JSON file stores minimal quiz definitions.

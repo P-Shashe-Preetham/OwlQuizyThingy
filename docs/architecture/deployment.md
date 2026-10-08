@@ -1,28 +1,47 @@
-# Architecture Deployment Model
+# Deployment Architecture
 
-## Topology
+## Overview
 
-The application supports multiple deployment strategies based on the configuration files present in the repository (`render.yaml`, `vercel.json`, `Dockerfile`, `compose.yml`).
+The **Deployment Architecture** illustrates how OwlQuizyThingy containers map to physical or virtual infrastructure.
 
-### 1. Hybrid Serverless / PaaS (Vercel & Render)
-This appears to be the primary intended cloud deployment model based on the proxy configuration in `vercel.json`.
+## Deployment Diagram
 
-*   **Frontend (Vercel):** The `@rahoot/web` static assets are built and served globally via Vercel's CDN (`vercel.json`).
-*   **Backend (Render):** The `@rahoot/socket` Node.js server runs as a Web Service on Render (`render.yaml`).
-*   **Networking:** Vercel acts as a reverse proxy for WebSocket connections. Requests to `/ws/*` are rewritten to `https://owlquizythingy.onrender.com/ws/*`.
+```mermaid
+C4Deployment
+    title Deployment diagram for OwlQuizyThingy
 
-### 2. Single-Node Docker Container
-A self-contained deployment model using the provided `Dockerfile` and `compose.yml`.
+    Deployment_Node(userDevice, "User Device", "Web Browser") {
+        Container(webApp, "Web Application", "React SPA")
+    }
 
-*   **Container:** An Alpine Linux based container running both Nginx (static file server for frontend) and Node.js (backend) managed by `supervisord`.
-*   **Networking:** Nginx serves the static React build and proxies `/ws/` requests internally to the Node.js process running on port 3001. The container exposes port 3000 to the host.
-*   **Volumes:** The `config` directory is mounted to persist local JSON quizzes if Firebase is not used.
+    Deployment_Node(dockerHost, "Docker Host", "Linux Server / Cloud VM") {
+        Deployment_Node(dockerContainer, "Docker Engine") {
+            Container(socketServer, "Socket Server", "Node.js (port 3000)")
+            Container(nginxProxy, "Reverse Proxy", "Nginx (Optional)")
+        }
+    }
 
-### Configuration Injection
-*   **Environment Variables:** Runtime configuration is injected via environment variables:
-    *   `MANAGER_PASSWORD`: Required for manager authentication.
-    *   `CORS_ORIGIN`: Restricts WebSocket connections.
-    *   `FIREBASE_SERVICE_ACCOUNT`: Base64 encoded or raw JSON for Firebase initialization (optional).
+    Deployment_Node(firebaseCloud, "Google Cloud Platform") {
+        System_Ext(firestore, "Firebase Firestore", "Database")
+    }
 
-### Scalability Considerations
-*   **Stateful Backend:** The `Socket Server` currently holds game state completely in memory. It cannot be horizontally scaled (multiple instances) without introducing a distributed pub/sub system (e.g., Redis) and sticky sessions for Socket.IO. Render must be configured to run a single instance.
+    Rel(userDevice, nginxProxy, "HTTPS / WSS")
+    Rel(nginxProxy, socketServer, "WSS / HTTP")
+    Rel(userDevice, socketServer, "Direct WSS fallback", "WSS")
+    Rel(socketServer, firestore, "HTTPS", "Service Account")
+```
+
+## Deployment Considerations
+
+### Docker
+
+The primary deployment mechanism is via Docker and Docker Compose.
+The provided `compose.yml` spins up the Node.js backend. The frontend can either be statically built and served via a CDN or routed through a containerized reverse proxy.
+
+### Stateful Backend
+
+The `Socket Server` currently holds game state completely in memory. It cannot be horizontally scaled (multiple instances) without introducing a distributed pub/sub system (e.g., Redis) and sticky sessions for Socket.IO. As such, the platform must be configured to run as a **single instance**.
+
+### Reverse Proxy & WebSockets
+
+Any reverse proxy (like Nginx, HAProxy, or cloud load balancers) fronting the Socket Server must be explicitly configured to support WebSocket upgrades (HTTP 101 Switching Protocols) and handle long-lived connections without aggressive timeouts.
