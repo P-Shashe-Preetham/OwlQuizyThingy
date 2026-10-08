@@ -65,7 +65,7 @@ class FirebaseService {
       this.initialized = true
       logger.info("🚀 Firebase Firestore initialized successfully.")
     } catch (error) {
-      logger.error("❌ Firebase initialization failed:", error)
+      logger.error("❌ Firebase initialization failed:", { error })
     }
   }
 
@@ -91,7 +91,7 @@ class FirebaseService {
         } as QuizzWithId
       })
     } catch (error) {
-      logger.error("Error fetching quizzes:", error)
+      logger.error("Error fetching quizzes:", { error })
 
       return []
     }
@@ -123,7 +123,7 @@ class FirebaseService {
 
       return quizzId
     } catch (error) {
-      logger.error("Error saving quiz:", error)
+      logger.error("Error saving quiz:", { error })
       throw error
     }
   }

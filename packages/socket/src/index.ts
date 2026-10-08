@@ -227,7 +227,7 @@ io.on("connection", (socket) => {
 
       socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
-      logger.error("Failed to read game config:", error)
+      logger.error("Failed to read game config:", { error })
       socket.emit("manager:errorMessage", "Failed to read game config")
     }
   })
@@ -265,7 +265,7 @@ io.on("connection", (socket) => {
         )
       }
     } catch (error) {
-      logger.error("Failed to save quiz:", error)
+      logger.error("Failed to save quiz:", { error })
       socket.emit("manager:errorMessage", "Failed to save quiz")
     }
   })
@@ -295,7 +295,7 @@ io.on("connection", (socket) => {
 
       socket.emit("manager:quizzList", combinedQuizzList)
     } catch (error) {
-      logger.error("Failed to delete quiz:", error)
+      logger.error("Failed to delete quiz:", { error })
       socket.emit("manager:errorMessage", "Failed to delete quiz")
     }
   })

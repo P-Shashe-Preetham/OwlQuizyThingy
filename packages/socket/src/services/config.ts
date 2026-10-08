@@ -22,7 +22,7 @@ function parseQuizFile(file: string): QuizzWithId | null {
     if (!validationResult.success) {
       logger.error(
         `⚠️ Malformed quiz file skipped: ${file}. Issues:`,
-        validationResult.error.format(),
+        { error: validationResult.error.format() },
       )
 
       return null
@@ -36,7 +36,7 @@ function parseQuizFile(file: string): QuizzWithId | null {
       id,
     }
   } catch (fileError) {
-    logger.error(`❌ Failed to read or parse quiz file ${file}:`, fileError)
+    logger.error(`❌ Failed to read or parse quiz file ${file}:`, { error: fileError })
 
     return null
   }
@@ -118,7 +118,7 @@ class Config {
         const config = fs.readFileSync(getPath("game.json"), "utf-8")
         configObj = JSON.parse(config)
       } catch (error) {
-        logger.error("Failed to read game config:", error)
+        logger.error("Failed to read game config:", { error })
       }
     }
 
@@ -153,7 +153,7 @@ class Config {
 
       return quizzes
     } catch (error) {
-      logger.error("Failed to read quizz directory:", error)
+      logger.error("Failed to read quizz directory:", { error })
 
       return []
     }
