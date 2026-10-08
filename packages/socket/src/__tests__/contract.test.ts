@@ -8,14 +8,12 @@ describe("Socket.IO Contract Testing", () => {
   })
 
   it("rejects invalid payloads with clear error messages", () => {
-    // Username too short
     const invalidLogin = { gameId: "game123", data: { username: "" } }
     const result = playerLoginSchema.safeParse(invalidLogin)
     expect(result.success).toBe(false)
   })
 
   it("blocks unauthorized access to protected events", () => {
-    // E.g. simulating a user sending manager events without a token
     const fakeManagerEvent = { action: "START_GAME", token: null }
     expect(fakeManagerEvent.token).toBeNull()
   })
@@ -25,7 +23,6 @@ describe("Socket.IO Contract Testing", () => {
     const event = "SUBMIT_ANSWER"
     expect(gameState).toBe("FINISHED")
     expect(event).toBe("SUBMIT_ANSWER")
-    // Logic would reject the event here
   })
 
   it("handles duplicate and stale events smoothly", () => {

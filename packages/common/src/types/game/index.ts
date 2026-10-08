@@ -14,7 +14,6 @@ export type Answer = {
 
 export type Quizz = {
   subject: string
-  ownerId?: string
   settings?: {
     theme?: string
     classicMode?: boolean

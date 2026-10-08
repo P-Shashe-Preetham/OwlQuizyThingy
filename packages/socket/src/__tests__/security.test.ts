@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import Game from "../services/game"
 import { GAME_STATE } from "@rahoot/common/types/game/status"
-import { Socket } from "socket.io"
 
 vi.mock("../services/registry", () => ({
   default: {

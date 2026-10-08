@@ -107,8 +107,8 @@ class Config {
     }
   }
 
-  static game(): Record<string, string> {
-    let configObj: Record<string, string> = {}
+  static game() {
+    let configObj: any = {}
 
     const isExists = fs.existsSync(getPath("game.json"))
 

@@ -27,13 +27,32 @@ const ManagerProtectedRoute = () => {
     }
 
     // Check session flag
-    const isAuthed = sessionStorage.getItem("manager_authenticated") === "true"
+    let isAuthed = false
+
+    try {
+      isAuthed = sessionStorage.getItem("manager_authenticated") === "true"
+    } catch {
+      // Ignore
+    }
+
     setIsAuthenticated(isAuthed)
   }, [socket])
 
   useEvent("manager:quizzList", () => {
-    sessionStorage.setItem("manager_authenticated", "true")
+    try {
+      sessionStorage.setItem("manager_authenticated", "true")
+    } catch {
+      // Ignore
+    }
+
     setIsAuthenticated(true)
+  })
+
+  useEvent("manager:errorMessage", (message) => {
+    if (message === "Unauthorized") {
+      sessionStorage.removeItem("manager_authenticated")
+      setIsAuthenticated(false)
+    }
   })
 
   if (isAuthenticated === null) {
