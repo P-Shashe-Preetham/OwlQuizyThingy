@@ -8,19 +8,49 @@ import {
   useSocket,
 } from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router"
 
 const ManagerAuthPage = () => {
   const { setGameId, setStatus } = useManagerStore()
   const navigate = useNavigate()
-  const { socket } = useSocket()
+  const { socket, isConnected } = useSocket()
 
-  const [isAuth, setIsAuth] = useState(false)
+  const MANAGER_AUTH_KEY = "manager_authenticated"
+
+  const getStoredManagerAuth = (): boolean => {
+    try {
+      return sessionStorage.getItem(MANAGER_AUTH_KEY) === "true"
+    } catch {
+      return false
+    }
+  }
+
+  const [isAuth, setIsAuth] = useState<boolean>(() =>
+    getStoredManagerAuth(),
+  )
   const [quizzList, setQuizzList] = useState<QuizzWithId[]>([])
   const [selectedQuizzId, setSelectedQuizzId] = useState<string | null>(null)
 
+  useEffect(() => {
+    setIsAuth(getStoredManagerAuth())
+  }, [])
+
+  useEffect(() => {
+    if (!isAuth || !socket || !isConnected) {
+      return
+    }
+
+    socket.emit("manager:getQuizzList")
+  }, [isAuth, isConnected, socket])
+
   useEvent("manager:quizzList", (quizzList) => {
+    try {
+      sessionStorage.setItem(MANAGER_AUTH_KEY, "true")
+    } catch {
+      // Ignore storage errors.
+    }
+
     setIsAuth(true)
     setQuizzList(quizzList)
   })

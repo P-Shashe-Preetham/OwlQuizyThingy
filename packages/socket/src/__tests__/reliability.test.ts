@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import Registry from "../services/registry"
-import FirebaseService from "../services/firebase"
 import Game from "../services/game"
 import { Server } from "socket.io"
 import { Quizz } from "@rahoot/common/types/game"
@@ -75,18 +74,27 @@ describe("Reliability & Operations", () => {
   })
 
   it("FirebaseService gracefully handles missing configuration", async () => {
-    // Save original env
     const originalEnv = process.env.FIREBASE_SERVICE_ACCOUNT
+    const loadEnvFileSpy = vi
+      .spyOn(process, "loadEnvFile")
+      .mockImplementation(() => undefined)
+
     delete process.env.FIREBASE_SERVICE_ACCOUNT
 
-    // We can't easily re-init the singleton, but we can verify its current state behavior
-    // If it was already initialized in another test, it will return true.
-    // If we call a method like getQuizzes without db, it should return [] safely
-    await expect(FirebaseService.getQuizzes()).resolves.toBeInstanceOf(Array)
+    try {
+      vi.resetModules()
+      const { default: FirebaseService } = await import("../services/firebase")
 
-    // Restore
-    if (originalEnv) {
-      process.env.FIREBASE_SERVICE_ACCOUNT = originalEnv
+      expect(FirebaseService.isInitialized()).toBe(false)
+      await expect(FirebaseService.getQuizzes()).resolves.toEqual([])
+    } finally {
+      loadEnvFileSpy.mockRestore()
+
+      if (originalEnv === undefined) {
+        delete process.env.FIREBASE_SERVICE_ACCOUNT
+      } else {
+        process.env.FIREBASE_SERVICE_ACCOUNT = originalEnv
+      }
     }
   })
 })

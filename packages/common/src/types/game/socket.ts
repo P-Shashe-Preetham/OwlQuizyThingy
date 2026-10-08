@@ -73,6 +73,7 @@ export interface ClientToServerEvents {
   // Manager actions
   "game:create": (_quizzId: string) => void
   "manager:auth": (_password: string) => void
+  "manager:getQuizzList": () => void
   "manager:saveQuizz": (_quizz: Quizz) => void
   "manager:deleteQuizz": (_id: string) => void
   "manager:reconnect": (_message: { gameId: string }) => void

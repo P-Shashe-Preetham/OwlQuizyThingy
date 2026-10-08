@@ -237,6 +237,23 @@ io.on("connection", (socket) => {
     }
   })
 
+  socket.on("manager:getQuizzList", async () => {
+    if (!isAuthenticatedManager(socket.id)) {
+      socket.emit("manager:errorMessage", "Unauthorized")
+
+      return
+    }
+
+    try {
+      const combinedQuizzList = await getCombinedQuizList()
+
+      socket.emit("manager:quizzList", combinedQuizzList)
+    } catch (error) {
+      logger.error("Failed to fetch quiz list:", { error })
+      socket.emit("manager:errorMessage", "Failed to fetch quiz list")
+    }
+  })
+
   socket.on("manager:saveQuizz", async (quizz) => {
     if (!isAuthenticatedManager(socket.id)) {
       socket.emit("manager:errorMessage", "Unauthorized")
