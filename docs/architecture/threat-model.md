@@ -1,31 +1,42 @@
-# Architecture Threat Model
+# Threat Model
 
-## Security Boundaries & Controls
+## Overview
 
-Based on `SECURITY.md` and codebase analysis, the following controls and risks are identified.
+This threat model outlines trust boundaries, potential threats, and the implemented mitigations within OwlQuizyThingy.
 
-### 1. Manager Authentication
-*   **Control:** A shared password (`MANAGER_PASSWORD` env var) protects manager actions. Every privileged Socket.IO event handler checks `isAuthenticatedManager(socket.id)`.
-*   **Risk:** The password is sent in plaintext over the WebSocket payload. While WebSockets (WSS) provide transport layer encryption (TLS), the internal architecture trusts the connection entirely once authenticated. If the shared password is compromised, all games can be manipulated.
-*   **Risk:** Connection dropping requires re-authenticating the new socket.
+## Trust Boundaries Diagram
 
-### 2. Input Validation (Zod)
-*   **Control:** The `@rahoot/common` package defines Zod schemas for all client-to-server events. The server parses payloads against these schemas before processing.
-*   **Risk:** Some custom endpoints might lack deep validation (e.g. media URL sanitization within quiz creation payloads).
+```mermaid
+flowchart TD
+    subgraph Untrusted Network [Untrusted Internet]
+        M[Manager Client]
+        P[Player Client]
+    end
 
-### 3. Cross-Origin Resource Sharing (CORS)
-*   **Control:** The `CORS_ORIGIN` environment variable restricts which origins can connect to the Socket.IO server.
-*   **Risk:** If misconfigured (e.g., set to `*` in production), arbitrary external sites could attempt to interact with the WebSocket server.
+    subgraph Trust Boundary [Server Infrastructure]
+        S[Socket Server]
+        C[Local Config]
+    end
 
-### 4. Player Impersonation
-*   **Control:** Players use a client-generated UUID (`clientId`) sent during the handshake to establish identity.
-*   **Risk:** If a malicious user observes or guesses another player's `clientId` and the active `gameId`, they could theoretically hijack the session via the `player:reconnect` flow. However, UUIDv4 makes guessing computationally infeasible.
+    subgraph External Trusted [Cloud Provider]
+        F[Firebase Firestore]
+    end
 
-### 5. Denial of Service (DoS) / Rate Limiting
-*   **Control:** The codebase implements basic rate limiting on the `manager:auth` endpoint per IP address to prevent brute-forcing the manager password.
-*   **Control:** The `Registry` limits the total number of concurrent games (`MAX_GAMES`).
-*   **Risk:** There is no explicit rate limiting on player joins or answer submissions documented in the primary index file, potentially exposing the server to application-layer memory exhaustion (creating too many players or answers).
+    M -- "WSS (Auth required)" --> S
+    P -- "WSS (PIN required)" --> S
+    S -- "File I/O" --> C
+    S -- "HTTPS (Service Account)" --> F
 
-### 6. Media Payloads
-*   **Control:** Media references (images, audio, video) in quizzes are currently handled as URLs.
-*   **Risk:** Stored Cross-Site Scripting (XSS) if URL validation is bypassed, or Server-Side Request Forgery (SSRF) if the server attempts to fetch these URLs (currently, it appears only the client fetches them, shifting the risk to the client browser).
+    classDef boundary fill:none,stroke:#f66,stroke-width:2px,stroke-dasharray: 5 5;
+    class Trust Boundary boundary;
+```
+
+## Threat Matrix
+
+| Threat | Component | Risk Level | Mitigation | Validation |
+| :--- | :--- | :---: | :--- | :--- |
+| **Unauthorized Manager Access** | Socket Server | High | Authentication required for privileged events. Hardcoded default passwords prohibited. | E2E Tests, unit tests for auth middleware. |
+| **Payload Injection / Fuzzing** | Socket Server | Medium | Strict schema validation using Zod for all incoming WebSocket messages. | Payload bounds checking tests. |
+| **Cross-Origin Resource Sharing** | Web Server | Medium | Strict CORS enforcement (`CORS_ORIGIN`). Refusal of unauthorized WebSocket handshake attempts. | Network trace verification. |
+| **Secret Exposure** | Source Code | High | `.gitignore` and `.dockerignore` enforcement. Secrets loaded exclusively via ENV variables at runtime. | CI/CD Gitleaks scanning. |
+| **Overlapping Round Transitions** | Socket Server | High | Added `currentGeneration` tokens and `abortCooldown()` timer cancellation to prevent race conditions. | Game engine concurrency tests. |

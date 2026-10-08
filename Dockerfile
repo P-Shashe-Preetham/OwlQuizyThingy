@@ -8,37 +8,32 @@ WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/common/package.json ./packages/common/
-COPY packages/web/package.json ./packages/web/
 COPY packages/socket/package.json ./packages/socket/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter @rahoot/socket...
 
-COPY . .
+COPY packages/common/ ./packages/common/
+COPY packages/socket/ ./packages/socket/
 
-RUN pnpm build
+RUN pnpm build --filter @rahoot/socket
 
 # ---- RUNNER ----
 FROM alpine:3.24 AS runner
 
-RUN apk add --no-cache nginx nodejs supervisor wget
+RUN apk add --no-cache nodejs
 
-COPY docker/nginx.conf /etc/nginx/http.d/default.conf
-COPY docker/supervisord.conf /etc/supervisord.conf
+WORKDIR /app
 
-COPY --from=builder /app/packages/web/dist /app/web
-COPY --from=builder /app/packages/socket/dist/index.cjs /app/socket/index.cjs
-COPY --from=builder /app/config /app/config
+COPY --from=builder /app/packages/socket/dist/index.cjs ./index.cjs
 
 RUN adduser -D appuser && \
-    chown -R appuser:appuser /app && \
-    chown appuser:appuser /etc/supervisord.conf && \
-    mkdir -p /tmp/supervisor && \
-    chown -R appuser:appuser /tmp/supervisor
+    chown -R appuser:appuser /app
 
 USER appuser
 
+ENV NODE_ENV=production
+ENV PORT=3000
+
 EXPOSE 3000
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD wget -qO- http://localhost:3000/health
-
-CMD ["supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["node", "index.cjs"]
