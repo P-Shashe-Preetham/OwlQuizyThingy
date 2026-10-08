@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3005',
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
   projects: [
@@ -18,8 +18,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm --filter @rahoot/web run preview --port 3005 --strictPort',
-    url: 'http://localhost:3005',
+    command: 'pnpm start',
+    url: 'http://localhost:3000',
     timeout: 120000,
     reuseExistingServer: !process.env.CI,
   },

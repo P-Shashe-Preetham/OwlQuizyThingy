@@ -1,3 +1,4 @@
+import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import { STATUS } from "@rahoot/common/types/game/status"
 import Button from "@rahoot/web/shared/components/Button"
 import Form from "@rahoot/web/shared/components/Form"
@@ -38,6 +39,7 @@ const Username = () => {
   useEvent("game:successJoin", (gameId) => {
     setStatus(STATUS.WAIT, { text: "Waiting for the players" })
     login(username.trim())
+    trackEvent("join_completed", { username: username.trim() })
     navigate(`/party/${gameId}`)
   })
 

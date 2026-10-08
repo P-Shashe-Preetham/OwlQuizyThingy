@@ -1,3 +1,4 @@
+import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import type { CommonStatusDataMap } from "@rahoot/common/types/game/status"
 import CricleCheck from "@rahoot/web/features/game/components/icons/CricleCheck"
 import CricleXmark from "@rahoot/web/features/game/components/icons/CricleXmark"
@@ -21,8 +22,9 @@ const Result = ({
 
   useEffect(() => {
     player.updatePoints(myPoints)
+    trackEvent("round_result", { correct, points, rank })
     sfxResults()
-  }, [myPoints, sfxResults])
+  }, [myPoints, sfxResults, correct, points, rank])
 
   return (
     <section className="anim-show relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center">

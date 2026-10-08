@@ -1,3 +1,4 @@
+import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import GameWrapper from "@rahoot/web/features/game/components/GameWrapper"
 import {
   useEvent,
@@ -32,6 +33,7 @@ const PlayerGamePage = () => {
       setStatus(status.name, status.data)
       setPlayer(player)
       setQuestionStates(currentQuestion)
+      trackEvent("reconnect_success", { gameId })
     },
   )
 

@@ -1,22 +1,59 @@
-# Architecture Data Flow Model
+# Data Flow
 
-## Real-Time Synchronization
+## Overview
 
-The system relies on a bi-directional, real-time data flow using WebSockets (Socket.IO).
+The **Data Flow** diagram maps the primary sequence of operations and data exchanges during a typical game lifecycle in OwlQuizyThingy.
 
-### Manager Flow (Creation & Game Control)
-1.  **Authentication:** Manager connects and emits `manager:auth` with a password payload.
-2.  **Quiz Management:** Authenticated managers emit `manager:saveQuizz` or `manager:deleteQuizz`. The server updates the persistence layer (Firebase/Local) and broadcasts the updated `manager:quizzList`.
-3.  **Game Initialization:** Manager emits `game:create` with a Quiz ID. Server loads the quiz, creates a new in-memory `Game` instance, generates a 6-digit invite code, and responds with `manager:gameCreated`.
-4.  **Game Control:** Manager emits control events (`manager:startGame`, `manager:nextQuestion`, `manager:showLeaderboard`, `manager:abortQuiz`).
-5.  **State Broadcast:** The server processes the manager's command, updates the in-memory game state, and broadcasts the new state (`game:status`) and relevant data to all clients in the specific game room.
+## Interaction Flow (Sequence Diagram)
 
-### Player Flow (Participation)
-1.  **Joining:** Player connects and emits `player:join` with a 6-digit invite code. If valid, the server returns `game:successRoom`.
-2.  **Login:** Player emits `player:login` with a username. The server adds the player to the in-memory `Game` instance and notifies the manager (`manager:newPlayer`) and broadcasts the total player count (`game:totalPlayers`).
-3.  **Answering:** During the `SELECT_ANSWER` phase, the player emits `player:selectedAnswer` with their choice. The server validates the answer, calculates points based on time elapsed, records it in the current round, and acknowledges the submission.
-4.  **State Reception:** Players passively receive `game:status` broadcasts that dictate what the UI should render (e.g., waiting screen, question text, result feedback).
+```mermaid
+sequenceDiagram
+    participant Manager
+    participant WebApp as Web Client
+    participant Server as Socket Server
+    participant Firebase as Firestore
 
-### State Authority
-*   The **Socket Server** is the strict single source of truth for all live game state.
-*   The **Web Client** is a "dumb" renderer. Its state (managed by Zustand) purely reflects the last status pushed by the server. It does not optimistically update game progression.
+    %% Setup Phase
+    Manager->>WebApp: Log in with password
+    WebApp->>Server: auth:login (password)
+    Server-->>WebApp: token / auth success
+    Manager->>WebApp: Select Quiz
+    WebApp->>Server: game:create (quizId)
+    Server->>Firebase: Fetch quiz data
+    Firebase-->>Server: Quiz JSON
+    Server-->>WebApp: Game PIN created
+
+    %% Join Phase
+    participant Player
+    Player->>WebApp: Enter PIN & Username
+    WebApp->>Server: player:join (PIN, username)
+    Server-->>WebApp: Join success / Game State
+
+    %% Game Loop
+    Manager->>WebApp: Start Game
+    WebApp->>Server: game:start
+    Server-->>WebApp: state: transition to 'question'
+
+    rect rgb(200, 220, 240)
+        Note over Server, Player: Round Timer Started
+        Player->>WebApp: Select Answer
+        WebApp->>Server: player:answer (choice)
+        Server-->>WebApp: Answer received
+
+        Note over Server: Timer Ends OR Fast-Forward
+        Server-->>WebApp: state: transition to 'answers'
+        Server-->>WebApp: broadcast scores
+    end
+
+    %% End Phase
+    Manager->>WebApp: End Game
+    WebApp->>Server: game:end
+    Server-->>WebApp: state: transition to 'podium'
+```
+
+## State Management
+
+The backend Node.js server maintains the absolute truth of the game state. Client instances only receive sanitized, partial views of this state (e.g., players do not see the correct answer until the round ends).
+
+- **Payload Validation**: Every step in this data flow that crosses the client-to-server boundary is validated using Zod.
+- **Round Concurrency**: Timers are bound to a specific generation token to prevent stale callbacks from triggering accidental state transitions.

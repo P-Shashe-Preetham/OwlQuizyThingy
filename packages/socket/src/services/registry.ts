@@ -1,3 +1,4 @@
+import { logger } from "../lib/observability/logger"
 import Game from "@rahoot/socket/services/game"
 import dayjs from "dayjs"
 
@@ -26,7 +27,7 @@ class Registry {
 
   addGame(game: Game): void {
     this.games.push(game)
-    console.log(`Game ${game.gameId} added. Total games: ${this.games.length}`)
+    logger.info(`Game ${game.gameId} added. Total games: ${this.games.length}`)
   }
 
   getGameById(gameId: string): Game | undefined {
@@ -68,7 +69,7 @@ class Registry {
         since: dayjs().unix(),
         game,
       })
-      console.log(
+      logger.info(
         `Game ${game.gameId} marked as empty. Total empty games: ${this.emptyGames.length}`
       )
     }
@@ -79,7 +80,7 @@ class Registry {
     this.emptyGames = this.emptyGames.filter((g) => g.game.gameId !== gameId)
 
     if (this.emptyGames.length < initialLength) {
-      console.log(
+      logger.info(
         `Game ${gameId} reactivated. Remaining empty games: ${this.emptyGames.length}`
       )
     }
@@ -93,7 +94,7 @@ class Registry {
     const removed = this.games.length < initialLength
 
     if (removed) {
-      console.log(`Game ${gameId} removed. Total games: ${this.games.length}`)
+      logger.info(`Game ${gameId} removed. Total games: ${this.games.length}`)
     }
 
     return removed
@@ -129,7 +130,7 @@ class Registry {
     this.games = this.games.filter((g) => !removedGameIds.includes(g.gameId))
     this.emptyGames = stillEmpty
 
-    console.log(
+    logger.info(
       `Removed ${removed.length} empty game(s). Remaining games: ${this.games.length}`
     )
   }
@@ -139,14 +140,14 @@ class Registry {
       this.cleanupEmptyGames()
     }, this.CLEANUP_INTERVAL_MS)
 
-    console.log("Game cleanup task started")
+    logger.info("Game cleanup task started")
   }
 
   stopCleanupTask(): void {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval)
       this.cleanupInterval = null
-      console.log("Game cleanup task stopped")
+      logger.info("Game cleanup task stopped")
     }
   }
 
@@ -154,7 +155,7 @@ class Registry {
     this.stopCleanupTask()
     this.games = []
     this.emptyGames = []
-    console.log("Registry cleaned up")
+    logger.info("Registry cleaned up")
   }
 }
 

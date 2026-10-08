@@ -1,3 +1,4 @@
+import { logger } from "../lib/observability/logger"
 import { Answer, Player, Quizz } from "@rahoot/common/types/game"
 import { Server, Socket } from "@rahoot/common/types/game/socket"
 import { GAME_STATE, GameState, StatusDataMap } from "@rahoot/common/types/game/status"
@@ -100,7 +101,7 @@ class Game {
       inviteCode: roomInvite,
     })
 
-    console.log(
+    logger.info(
       `New game created: ${roomInvite} subject: ${this.quizz.subject}`,
     )
   }
@@ -187,7 +188,9 @@ class Game {
   }
 
   kickPlayer(socket: Socket, playerId: string) {
-    if (this.manager.id !== socket.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (this.manager.clientId !== clientId) {
       return
     }
 
@@ -249,7 +252,7 @@ class Game {
     socket.emit("game:totalPlayers", this.players.length)
 
     registry.reactivateGame(this.gameId)
-    console.log(`Manager reconnected to game ${this.inviteCode}`)
+    logger.info(`Manager reconnected to game ${this.inviteCode}`)
   }
 
   private reconnectPlayer(socket: Socket) {
@@ -306,7 +309,7 @@ class Game {
       },
     })
     socket.emit("game:totalPlayers", this.players.length)
-    console.log(
+    logger.info(
       `Player ${player.username} reconnected to game ${this.inviteCode}`,
     )
   }
@@ -347,7 +350,9 @@ class Game {
   }
 
   async start(socket: Socket) {
-    if (this.manager.id !== socket.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (this.manager.clientId !== clientId) {
       return
     }
 
@@ -592,7 +597,9 @@ return
   }
 
   nextRound(socket: Socket) {
-    if (!this.started || socket.id !== this.manager.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (!this.started || this.manager.clientId !== clientId) {
       return
     }
 
@@ -610,7 +617,9 @@ return
   }
 
   abortRound(socket: Socket) {
-    if (!this.started || socket.id !== this.manager.id) {
+    const { clientId } = socket.handshake.auth
+
+    if (!this.started || this.manager.clientId !== clientId) {
       return
     }
 
@@ -624,7 +633,13 @@ return
     this.io.to(this.gameId).emit("game:reset", "Game aborted by manager")
   }
 
-  showLeaderboard() {
+  showLeaderboard(socket: Socket) {
+    const { clientId } = socket.handshake.auth
+
+    if (!this.started || this.manager.clientId !== clientId) {
+      return
+    }
+
     if (this.currentState !== GAME_STATE.SHOW_RESULT) {
       return
     }
