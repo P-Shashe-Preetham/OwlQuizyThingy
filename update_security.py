@@ -1,4 +1,6 @@
-# Security Policy
+import sys
+
+security_content = """# Security Policy
 
 ## Supported Versions
 
@@ -36,3 +38,9 @@ OwlQuizyThingy enforces the following security controls:
 - Security testing and vulnerability scanning must be run as part of the CI/CD pipeline (e.g., CodeQL, Trivy, Gitleaks).
 - Changes that touch authentication flows, authorization logic, or socket payload validation must be thoroughly reviewed and require passing integration tests demonstrating proper enforcement.
 - Do not bypass security tools unless explicitly approved via a documented security decision.
+"""
+
+with open("SECURITY.md", "w") as f:
+    f.write(security_content)
+
+print("SECURITY.md updated.")

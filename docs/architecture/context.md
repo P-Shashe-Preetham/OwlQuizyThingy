@@ -1,17 +1,30 @@
-# Architecture Context Model
+# System Context
 
-## System Context
-OwlQuizThingy is a real-time, interactive quiz platform designed for live classroom and group game sessions.
+## Overview
 
-### Core Actors
-*   **Manager (Teacher/Host):** Creates quizzes, manages game sessions, starts games, kicks players, and advances rounds.
-*   **Player (Student/Participant):** Joins game sessions via a 6-digit invite code, submits answers to questions in real-time, and views their score and leaderboard position.
+The **System Context** document defines the high-level boundaries, users, and external systems that interact with **OwlQuizyThingy**.
 
-### External Systems
-*   **Firebase Firestore:** Optional persistent storage for quizzes.
-*   **Local JSON Configuration:** Fallback/alternative local persistent storage for quizzes.
+## Context Diagram
 
-## Interactions
-*   **Managers** authenticate using a shared password, manage quizzes, and start/control live game sessions.
-*   **Players** join a game session without a password using an invite code and participate by providing a username.
-*   **The System** reads quizzes from Firebase or local storage, manages the live real-time game state via WebSockets (Socket.IO), and synchronizes state between all connected participants.
+```mermaid
+C4Context
+    title System Context diagram for OwlQuizyThingy
+
+    Person(manager, "Quiz Manager", "Creates, hosts, and manages quiz sessions.")
+    Person(player, "Quiz Player", "Joins a live quiz session using a unique PIN to answer questions.")
+
+    System(owlQuiz, "OwlQuizyThingy", "Real-time, interactive quiz platform.")
+
+    System_Ext(firebase, "Firebase (Firestore)", "Stores quiz configurations, collections, and handles basic authentication configuration for managers.")
+
+    Rel(manager, owlQuiz, "Hosts quizzes, manages state", "HTTPS/WSS")
+    Rel(player, owlQuiz, "Joins and plays quizzes", "HTTPS/WSS")
+    Rel(owlQuiz, firebase, "Reads/writes quiz data", "HTTPS")
+```
+
+## System Elements
+
+- **Quiz Manager**: The primary user who authenticates into the system, creates the quiz logic, opens a session, and navigates players through the questions.
+- **Quiz Player**: The end-user connecting to a live session. They do not require authentication beyond providing the session PIN and a username.
+- **OwlQuizyThingy**: The core application, consisting of the frontend user interface and the backend Socket.IO state machine.
+- **Firebase**: The external cloud database.

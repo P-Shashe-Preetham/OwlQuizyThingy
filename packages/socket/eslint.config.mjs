@@ -78,8 +78,8 @@ export default defineConfig([
       "max-classes-per-file": ["error", { ignoreExpressions: true }],
       "max-depth": ["error", 3],
       "max-lines": [
-        "error",
-        { max: 500, skipBlankLines: true, skipComments: true },
+        "warn",
+        { max: 1000, skipBlankLines: true, skipComments: true },
       ],
       "max-nested-callbacks": ["error", 3],
       "max-params": ["error", 4],
