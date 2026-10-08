@@ -1,3 +1,4 @@
+import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import type { CommonStatusDataMap } from "@rahoot/common/types/game/status"
 import AnswerButton from "@rahoot/web/features/game/components/AnswerButton"
 import {
@@ -43,7 +44,7 @@ const Answers = ({
   })
 
   const handleAnswer = (answerKey: number) => () => {
-    if (!player) {
+    if (!player || hasSubmitted) {
       return
     }
 
@@ -53,6 +54,8 @@ const Answers = ({
         answerKey,
       },
     })
+    setHasSubmitted(true)
+    trackEvent("answer_submitted", { answerKey })
     sfxPop()
   }
 
@@ -66,6 +69,7 @@ const Answers = ({
       data: { answerKey: typedAnswer.trim() },
     })
     setHasSubmitted(true)
+    trackEvent("answer_submitted", { answerKey: typedAnswer.trim() })
     sfxPop()
   }
 
@@ -109,6 +113,26 @@ const Answers = ({
       </form>
     )
   }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (type === "type-answer") {return}
+
+      const {key} = e
+
+      if (["1", "2", "3", "4"].includes(key)) {
+        const index = parseInt(key, 10) - 1
+
+        if (index < answers.length) {
+          handleAnswer(index)()
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+
+
+return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [player, hasSubmitted, answers.length, type])
 
   useEffect(() => {
     if (video || audio) {
@@ -196,7 +220,7 @@ const Answers = ({
             {answers.map((answer, key) => (
               <AnswerButton
                 key={key}
-                className={clsx(ANSWERS_COLORS[key], player && "h-full")}
+                className={clsx(ANSWERS_COLORS[key], player && "h-full", player && hasSubmitted && "opacity-50 pointer-events-none")}
                 icon={ANSWERS_ICONS[key]}
                 onClick={handleAnswer(key)}
               >
