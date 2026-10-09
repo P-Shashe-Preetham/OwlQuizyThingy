@@ -141,7 +141,7 @@ return () => window.removeEventListener("keydown", handleKeyDown)
 
     playMusic()
 
-    // eslint-disable-next-line consistent-return
+
     return () => {
       stopMusic()
     }

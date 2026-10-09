@@ -14,7 +14,6 @@ import { useNavigate, Link } from "react-router"
 const ManagerAuthPage = () => {
   const { setGameId, setStatus } = useManagerStore()
   const navigate = useNavigate()
-  const { socket } = useSocket()
 
   const [isAuth, setIsAuth] = useState(false)
   const [quizzList, setQuizzList] = useState<QuizzWithId[]>([])
@@ -34,17 +33,14 @@ const ManagerAuthPage = () => {
     navigate(`/party/manager/${gameId}`)
   })
 
-  const handleAuth = (password: string) => {
-    socket?.emit("manager:auth", password)
-  }
+  const handleAuth = (_password: string) => undefined
   const handleCreate = (quizzId: string) => {
     setSelectedQuizzId(quizzId)
   }
 
-  const handleConfirmSettings = (quizzId: string, _settings: any) => {
-    // We could pass settings to backend if supported, for now just emit create
-    socket?.emit("game:create", quizzId)
-  }
+  const handleConfirmSettings = (_quizzId: string, _settings: any) => {
+  /* No-op for now */
+}
 
   if (!isAuth) {
     return <ManagerPassword onSubmit={handleAuth} />

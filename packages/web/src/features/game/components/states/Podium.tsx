@@ -54,7 +54,7 @@ const usePodiumAnimation = (topLength: number) => {
       setApparition((value) => value + 1)
     }, 2000)
 
-    // eslint-disable-next-line consistent-return
+
     return () => clearInterval(interval)
   }, [apparition, topLength])
 

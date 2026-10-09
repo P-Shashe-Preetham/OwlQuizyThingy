@@ -1,193 +1,122 @@
-/* eslint-disable no-empty-function */
+import React, { createContext, useContext, useEffect, useState, useMemo } from "react"
+import { rtdb, auth } from "@rahoot/web/lib/firebase"
+import { ref, onValue, off } from "firebase/database"
+import { usePlayerStore } from "../stores/player"
+import { useManagerStore } from "../stores/manager"
+import { onAuthStateChanged } from "firebase/auth"
 
-import type {
-  ClientToServerEvents,
-  ServerToClientEvents,
-} from "@rahoot/common/types/game/socket"
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
-import { io, Socket } from "socket.io-client"
-import { v7 as uuid } from "uuid"
-
-type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>
-
-interface SocketContextValue {
-  socket: TypedSocket | null
+interface FirebaseGameContextValue {
+  gameState: any | null
   isConnected: boolean
   connectionError: string | null
   clientId: string
-  connect: () => void
-  disconnect: () => void
   reconnect: () => void
 }
 
-const SocketContext = createContext<SocketContextValue>({
-  socket: null,
+const FirebaseGameContext = createContext<FirebaseGameContextValue>({
+  gameState: null,
   isConnected: false,
   connectionError: null,
   clientId: "",
-  connect: () => {},
-  disconnect: () => {},
-  reconnect: () => {},
+  reconnect: () => { /* No-op */ },
 })
 
-const getClientId = (): string => {
-  try {
-    const stored = localStorage.getItem("client_id")
-
-    if (stored) {
-      return stored
-    }
-
-    const newId = uuid()
-    localStorage.setItem("client_id", newId)
-
-    return newId
-  } catch {
-    return uuid()
-  }
-}
-
-export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const socketRef = React.useRef<TypedSocket | null>(null)
-  const [socket, setSocket] = useState<TypedSocket | null>(null)
+export const FirebaseGameProvider = ({ children }: { children: React.ReactNode }) => {
+  const [gameState, setGameState] = useState<any | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
-  const [clientId] = useState<string>(() => getClientId())
+  const [clientId, setClientId] = useState<string>("")
+
+  const { gameId: playerGameId } = usePlayerStore()
+  const { gameId: managerGameId } = useManagerStore()
+
+  const gameId = playerGameId || managerGameId
 
   useEffect(() => {
-    let isMounted = true
-
-    if (socketRef.current) {
-      return
-    }
-
-    let socketClient: TypedSocket | null = null
-
-    try {
-      const serverUrl = import.meta.env.VITE_WS_URL || "/"
-      socketRef.current = io(serverUrl, {
-        path: "/ws",
-        autoConnect: false,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        auth: {
-          clientId,
-        },
-      })
-      socketClient = socketRef.current
-
-      if (isMounted) {setSocket(socketClient)}
-
-      socketClient.on("connect", () => {
-        if (isMounted) {setIsConnected(true)}
-
-        if (isMounted) {setConnectionError(null)}
-      })
-
-      socketClient.on("disconnect", () => {
-        if (isMounted) {setIsConnected(false)}
-      })
-
-      socketClient.on("connect_error", (err) => {
-        console.error("Connection error:", err.message)
-
-        if (isMounted) {setIsConnected(false)}
-
-        if (isMounted) {setConnectionError(
-          `Could not connect to WebSocket backend server (${serverUrl}). Ensure @rahoot/socket server is running and VITE_WS_URL is configured.`,
-        )}
-      })
-    } catch (error) {
-      console.error("Failed to initialize socket:", error)
-
-      if (isMounted) {setConnectionError("Failed to initialize Socket connection.")}
-    }
-
-    // eslint-disable-next-line consistent-return
-    return () => {
-      isMounted = false
-
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setClientId(user.uid)
+      } else {
+        setClientId("")
       }
-    }
-  }, [clientId])
+    })
 
-  const connect = useCallback(() => {
-    if (socket && !socket.connected) {
-      setConnectionError(null)
-      socket.connect()
-    }
-  }, [socket])
 
-  const disconnect = useCallback(() => {
-    if (socket && socket.connected) {
-      socket.disconnect()
-    }
-  }, [socket])
+return () => unsubAuth()
+  }, [])
 
-  const reconnect = useCallback(() => {
-    if (socket) {
-      setConnectionError(null)
-      socket.disconnect()
-      socket.connect()
+  useEffect(() => {
+    const connectedRef = ref(rtdb, ".info/connected")
+    const unsub = onValue(connectedRef, (snap) => {
+      if (snap.val() === true) {
+        setIsConnected(true)
+        setConnectionError(null)
+      } else {
+        setIsConnected(false)
+      }
+    })
+
+    return () => off(connectedRef, "value", unsub)
+  }, [])
+
+  useEffect(() => {
+    if (!gameId) {
+      setGameState(null)
+
+
+return
     }
-  }, [socket])
+
+    const gameRef = ref(rtdb, `games/${gameId}`)
+
+    const unsub = onValue(gameRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setGameState(snapshot.val())
+      } else {
+        setGameState(null)
+        setConnectionError("Game not found or expired")
+      }
+    }, (error) => {
+      console.error("Game listener error:", error)
+      setConnectionError(error.message)
+    })
+
+    return () => off(gameRef, "value", unsub)
+  }, [gameId])
+
+  const reconnect = () => {
+    setConnectionError(null)
+  }
+
+  const value = useMemo(() => ({
+    gameState,
+    isConnected,
+    connectionError,
+    clientId,
+    reconnect
+  }), [gameState, isConnected, connectionError, clientId])
 
   return (
-    <SocketContext.Provider
-      value={{
-        socket,
-        isConnected,
-        connectionError,
-        clientId,
-        connect,
-        disconnect,
-        reconnect,
-      }}
-    >
+    <FirebaseGameContext.Provider value={value}>
       {children}
-    </SocketContext.Provider>
+    </FirebaseGameContext.Provider>
   )
 }
 
-export const useSocket = () => useContext(SocketContext)
+export const useFirebaseGame = () => useContext(FirebaseGameContext)
 
-export const useEvent = <E extends keyof ServerToClientEvents>(
-  event: E,
-  callback: ServerToClientEvents[E],
-) => {
-  const { socket } = useSocket()
-  const callbackRef = React.useRef(callback)
+export const useSocket = () => {
+  const { isConnected, connectionError, reconnect } = useFirebaseGame()
 
-  // Always keep the ref up to date with latest callback
-  React.useEffect(() => {
-    callbackRef.current = callback
-  })
 
-  useEffect(() => {
-    if (!socket) {
-      return
-    }
-
-    // Use a stable wrapper that delegates to the ref
-    const stableCallback = ((...args: any[]) => {
-      ;(callbackRef.current as any)(...args)
-    }) as ServerToClientEvents[E]
-
-    socket.on(event, stableCallback as any)
-
-    // eslint-disable-next-line consistent-return
-    return () => {
-      socket.off(event, stableCallback as any)
-    }
-  }, [socket, event])
+return {
+    socket: null,
+    isConnected,
+    connectionError,
+    connect: () => { /* No-op */ },
+    disconnect: () => { /* No-op */ },
+    reconnect
+  }
 }
+
+export const useEvent = () => { /* No-op */ }
