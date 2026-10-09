@@ -1,9 +1,6 @@
 import type { Player } from "@rahoot/common/types/game"
 import type { ManagerStatusDataMap } from "@rahoot/common/types/game/status"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
 import { useState } from "react"
 import QRCode from "react-qr-code"
@@ -14,27 +11,15 @@ type Props = {
 
 const Room = ({ data: { text, inviteCode } }: Props) => {
   const { gameId } = useManagerStore()
-  const { socket } = useSocket()
+
   const webUrl = window.location.origin
   const { players } = useManagerStore()
   const [playerList, setPlayerList] = useState<Player[]>(players)
   const [totalPlayers, setTotalPlayers] = useState(0)
 
-  useEvent("manager:newPlayer", (player) => {
-    setPlayerList((prev) => [...prev, player])
-  })
 
-  useEvent("manager:removePlayer", (playerId) => {
-    setPlayerList((prev) => prev.filter((p) => p.id !== playerId))
-  })
 
-  useEvent("manager:playerKicked", (playerId) => {
-    setPlayerList((prev) => prev.filter((p) => p.id !== playerId))
-  })
 
-  useEvent("game:totalPlayers", (total) => {
-    setTotalPlayers(total)
-  })
 
   const handleKick = (playerId: string) => () => {
     if (!gameId) {

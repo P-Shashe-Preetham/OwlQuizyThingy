@@ -1,29 +1,39 @@
-import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
+import { trackEvent } from "@rahoot/web/features/telemetry/firebase"
 import { STATUS } from "@rahoot/common/types/game/status"
 import Button from "@rahoot/web/shared/components/Button"
 import Form from "@rahoot/web/shared/components/Form"
 import Input from "@rahoot/web/shared/components/Input"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
-
 import { type KeyboardEvent, useState } from "react"
 import { useNavigate } from "react-router"
+import { functions } from "@rahoot/web/lib/firebase"
+import { httpsCallable } from "firebase/functions"
+import toast from "react-hot-toast"
 
 const Username = () => {
-  const { socket } = useSocket()
   const { gameId, login, setStatus } = usePlayerStore()
   const navigate = useNavigate()
   const [username, setUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!gameId || isLoading || !username.trim()) {return}
 
     setIsLoading(true)
-    socket?.emit("player:login", { gameId, data: { username: username.trim() } })
+
+    try {
+      const joinGame = httpsCallable(functions, "joinGame")
+      await joinGame({ gameId, username: username.trim() })
+
+      setStatus(STATUS.WAIT, { text: "Waiting for the players" })
+      login(username.trim())
+      trackEvent("join_completed", { username: username.trim() })
+      navigate(`/party/${gameId}`)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to join game")
+      setIsLoading(false)
+    }
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -35,17 +45,6 @@ const Username = () => {
   const handleBack = () => {
     window.location.href = "/"
   }
-
-  useEvent("game:successJoin", (gameId) => {
-    setStatus(STATUS.WAIT, { text: "Waiting for the players" })
-    login(username.trim())
-    trackEvent("join_completed", { username: username.trim() })
-    navigate(`/party/${gameId}`)
-  })
-
-  useEvent("game:errorMessage", () => {
-    setIsLoading(false)
-  })
 
   return (
     <Form>

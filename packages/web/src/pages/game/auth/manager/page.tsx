@@ -3,77 +3,88 @@ import { STATUS } from "@rahoot/common/types/game/status"
 import ManagerPassword from "@rahoot/web/features/game/components/create/ManagerPassword"
 import SelectQuizz from "@rahoot/web/features/game/components/create/SelectQuizz"
 import GameSettingsModal from "@rahoot/web/features/game/components/create/GameSettingsModal"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
 import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router"
+import { auth, db, functions } from "@rahoot/web/lib/firebase"
+import { signInWithEmailAndPassword, onAuthStateChanged, type User } from "firebase/auth"
+import { collection, getDocs } from "firebase/firestore"
+import { httpsCallable } from "firebase/functions"
+import toast from "react-hot-toast"
 
 const ManagerAuthPage = () => {
   const { setGameId, setStatus } = useManagerStore()
   const navigate = useNavigate()
-  const { socket, isConnected } = useSocket()
 
-  const MANAGER_AUTH_KEY = "manager_authenticated"
-
-  const getStoredManagerAuth = (): boolean => {
-    try {
-      return sessionStorage.getItem(MANAGER_AUTH_KEY) === "true"
-    } catch {
-      return false
-    }
-  }
-
-  const [isAuth, setIsAuth] = useState<boolean>(() =>
-    getStoredManagerAuth(),
-  )
+  const [user, setUser] = useState<User | null>(null)
+  const [isAuth, setIsAuth] = useState(false)
   const [quizzList, setQuizzList] = useState<QuizzWithId[]>([])
   const [selectedQuizzId, setSelectedQuizzId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    setIsAuth(getStoredManagerAuth())
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+
+      if (currentUser && !currentUser.isAnonymous) {
+        setIsAuth(true)
+        fetchQuizzes()
+      } else {
+        setIsAuth(false)
+      }
+
+      setIsLoading(false)
+    })
+
+
+return () => unsubscribe()
   }, [])
 
-  useEffect(() => {
-    if (!isAuth || !socket || !isConnected) {
-      return
-    }
-
-    socket.emit("manager:getQuizzList")
-  }, [isAuth, isConnected, socket])
-
-  useEvent("manager:quizzList", (quizzList) => {
+  const fetchQuizzes = async () => {
     try {
-      sessionStorage.setItem(MANAGER_AUTH_KEY, "true")
-    } catch {
-      // Ignore storage errors.
+      const querySnapshot = await getDocs(collection(db, "quizzes"))
+      const quizzes: QuizzWithId[] = []
+      querySnapshot.forEach((doc) => {
+        quizzes.push({ id: doc.id, ...doc.data() } as QuizzWithId)
+      })
+      setQuizzList(quizzes)
+    } catch (error) {
+      console.error("Failed to fetch quizzes", error)
+      toast.error("Failed to fetch quizzes")
     }
-
-    setIsAuth(true)
-    setQuizzList(quizzList)
-  })
-
-  useEvent("manager:gameCreated", ({ gameId, inviteCode }) => {
-    setGameId(gameId)
-    setStatus(STATUS.SHOW_ROOM, {
-      text: "Waiting for the players",
-      inviteCode,
-    })
-    navigate(`/party/manager/${gameId}`)
-  })
-
-  const handleAuth = (password: string) => {
-    socket?.emit("manager:auth", password)
   }
+
+  const handleAuth = async (password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, "manager@rahoot.com", password)
+    } catch (error: any) {
+      toast.error(error.message || "Invalid credentials")
+    }
+  }
+
   const handleCreate = (quizzId: string) => {
     setSelectedQuizzId(quizzId)
   }
 
-  const handleConfirmSettings = (quizzId: string, _settings: any) => {
-    // We could pass settings to backend if supported, for now just emit create
-    socket?.emit("game:create", quizzId)
+  const handleConfirmSettings = async (quizzId: string, settings: any) => {
+    try {
+      const createGame = httpsCallable(functions, "createGame")
+      const result = await createGame({ quizzId })
+      const data = result.data as { gameId: string; inviteCode: string }
+
+      setGameId(data.gameId)
+      setStatus(STATUS.SHOW_ROOM, {
+        text: "Waiting for the players",
+        inviteCode: data.inviteCode,
+      })
+      navigate(`/party/manager/${data.gameId}`)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create game")
+    }
+  }
+
+  if (isLoading) {
+    return <div className="text-white text-center">Loading...</div>
   }
 
   if (!isAuth) {

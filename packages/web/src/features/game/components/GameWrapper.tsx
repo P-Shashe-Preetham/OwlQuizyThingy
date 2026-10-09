@@ -2,10 +2,7 @@ import type { Status } from "@rahoot/common/types/game/status"
 import background from "@rahoot/web/assets/background.webp"
 import Button from "@rahoot/web/shared/components/Button"
 import Loader from "@rahoot/web/shared/components/Loader"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import { useQuestionStore } from "@rahoot/web/features/game/stores/question"
 import { MANAGER_SKIP_BTN } from "@rahoot/web/features/game/utils/constants"
@@ -20,25 +17,13 @@ type Props = PropsWithChildren & {
 }
 
 const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
-  const { isConnected, connectionError, reconnect } = useSocket()
+  const { isConnected, connectionError, reconnect } = useFirebaseGame()
   const { player } = usePlayerStore()
-  const { questionStates, setQuestionStates } = useQuestionStore()
+  const { questionStates } = useQuestionStore()
   const [isDisabled, setIsDisabled] = useState(false)
   const [bypassedLoader, setBypassedLoader] = useState(false)
   const [gameError, setGameError] = useState<string | null>(null)
   const next = statusName ? MANAGER_SKIP_BTN[statusName] : null
-
-  useEvent("game:updateQuestion", ({ current, total }) => {
-    setQuestionStates({
-      current,
-      total,
-    })
-  })
-
-  useEvent("game:errorMessage", (message) => {
-    setGameError(message)
-    setIsDisabled(false)
-  })
 
   useEffect(() => {
     setIsDisabled(false)
@@ -67,7 +52,7 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
                 <div className="mb-4 text-4xl">🔌</div>
                 <h1 className="mb-2 text-2xl font-bold">Backend Not Connected</h1>
                 <p className="mb-6 text-sm text-gray-300">
-                  The frontend is live, but the real-time WebSocket game server (`@rahoot/socket`) could not be reached.
+                  The frontend is live, but the real-time game server (Firebase functions) could not be reached.
                 </p>
                 <div className="flex flex-col gap-3">
                   <Button onClick={() => reconnect()} className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl">

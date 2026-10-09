@@ -1,0 +1,37 @@
+{
+  "name": "functions",
+  "version": "1.0.0",
+  "description": "Firebase Cloud Functions for OwlQuizyThingy",
+  "main": "lib/index.js",
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "pnpm run build && firebase emulators:start --only functions",
+    "shell": "pnpm run build && firebase functions:shell",
+    "start": "pnpm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.7.0",
+    "firebase-functions": "^7.4.0",
+    "zod": "^4.3.6",
+    "@rahoot/common": "workspace:*",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "firebase-functions-test": "^3.5.0",
+    "@types/uuid": "^11.0.0",
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "typescript-eslint": "^8.57.0"
+  },
+  "private": true
+}

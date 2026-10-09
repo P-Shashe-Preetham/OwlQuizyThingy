@@ -1,7 +1,11 @@
 packages:
   - "packages/*"
+  - "functions"
 
-onlyBuiltDependencies:
-  - "@firebase/util"
-  - "esbuild"
-  - "protobufjs"
+allowBuilds:
+  "@firebase/util": true
+  "@parcel/watcher": true
+  esbuild: true
+  lefthook: true
+  protobufjs: true
+  unrs-resolver: true

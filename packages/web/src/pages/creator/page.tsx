@@ -1,3 +1,4 @@
+import { ImageUploader } from "./ImageUploader"
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import type { Quizz, QuizzWithId } from "@rahoot/common/types/game"
@@ -19,8 +20,7 @@ const Icons = [Triangle, Rhombus, Circle, Square]
 type PartialQuestion = Quizz["questions"][number];
 
 const CreatorPage = () => {
-  const { socket } = useSocket()
-  const navigate = useNavigate()
+    const navigate = useNavigate()
   const location = useLocation()
   const [subject, setSubject] = useState("My Awesome Quiz")
   const [classicMode, setClassicMode] = useState(false)
@@ -85,28 +85,7 @@ const CreatorPage = () => {
     }
   }, [subject, classicMode, theme, questions, isSaving])
 
-  useEvent("manager:quizzSaved", ({ id: savedId, subject }) => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
-    }
 
-    setIsSaving(false)
-    localStorage.removeItem(`draft_quizz_${id || "new"}`)
-    toast.success(`Quiz "${subject}" saved successfully!`)
-
-    if (savedId) {
-      setId(savedId)
-    }
-  })
-
-  useEvent("manager:errorMessage", (message) => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
-    }
-
-    setIsSaving(false)
-    toast.error(message)
-  })
 
   const handleSave = () => {
     if (!socket) {
@@ -364,19 +343,13 @@ const CreatorPage = () => {
 
             {/* Multimedia Placeholder & Question Settings */}
             <div className="flex justify-center flex-wrap gap-8">
-              <div className="w-80 h-48 bg-white/5 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-slate-400 hover:bg-white/10 transition-all cursor-pointer group shadow-xl">
-                <span className="text-4xl mb-2 group-hover:scale-110 transition-transform">
-                  🖼️
-                </span>
-                <span className="text-sm font-bold">Image URL</span>
-                <input
-                  className="mt-2 w-3/4 p-1 bg-transparent text-xs text-center border-b border-white/10 focus:outline-none focus:border-primary text-white"
-                  placeholder="paste link..."
-                  value={currentQ.image || ""}
-                  onChange={(e) => updateQuestion({ image: e.target.value })}
-                  aria-label="Image URL"
-                />
-              </div>
+
+              <ImageUploader
+                currentUrl={currentQ.image}
+                onImageChange={(url) => updateQuestion({ image: url })}
+                quizzId={id || "new"}
+              />
+
 
               <div className="flex flex-col gap-4 justify-center">
                 <div className="bg-slate-800 p-4 rounded-3xl border border-white/10 shadow-xl">

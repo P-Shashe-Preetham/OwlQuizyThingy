@@ -1,33 +1,8 @@
-import { Socket } from "@rahoot/common/types/game/socket"
-import Game from "../services/game"
-import Registry from "../services/registry"
+import { getDatabase } from "firebase-admin/database"
 
-export const withGame = (
-  gameId: string | undefined,
-  socket: Socket,
-  callback: (_game: Game) => void
-): void => {
-  if (!gameId) {
-    socket.emit("game:errorMessage", "Game not found")
-
-    return
-  }
-
-  const registry = Registry.getInstance()
-  const game = registry.getGameById(gameId)
-
-  if (!game) {
-    socket.emit("game:errorMessage", "Game not found")
-
-    return
-  }
-
-  callback(game)
-}
-
-export const createInviteCode = (length = 6): string => {
+export const createInviteCode = async (length = 6): Promise<string> => {
   const characters = "0123456789"
-  const registry = Registry.getInstance()
+  const db = getDatabase()
   
   let result = ""
   let attempts = 0
@@ -39,10 +14,17 @@ export const createInviteCode = (length = 6): string => {
       const randomIndex = Math.floor(Math.random() * characters.length)
       result += characters.charAt(randomIndex)
     }
-    attempts += 1
-  } while (registry.getGameByInviteCode(result) && attempts < maxAttempts)
 
-  return result
+    // Check if code exists in RTDB
+    const snapshot = await db.ref(`gamesByInviteCode/${result}`).get()
+    if (!snapshot.exists()) {
+      return result
+    }
+
+    attempts += 1
+  } while (attempts < maxAttempts)
+
+  throw new Error("Failed to generate unique invite code")
 }
 
 export const timeToPoint = (startTime: number, seconds: number): number => {

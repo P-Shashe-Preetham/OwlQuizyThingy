@@ -12,17 +12,17 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: ["**/node_modules/**", "**/dist/**", "**/cypress/**", "**/.{idea,git,cache,output,temp}/**", "**/tests/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/tests/**",
+    ],
   },
   server: {
     port: 3000,
     host: "0.0.0.0",
-    proxy: {
-      "/ws": {
-        target: "http://localhost:3001",
-        ws: true,
-      },
-    },
   },
   preview: {
     port: 3000,

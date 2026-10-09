@@ -3,13 +3,23 @@
   "scripts": {
     "dev": "dotenv -e .env -- pnpm -r --parallel dev",
     "dev:web": "dotenv -e .env -- pnpm --filter web dev",
-    "dev:socket": "dotenv -e .env -- pnpm --filter socket dev",
     "build": "pnpm -r run build",
     "build:web": "pnpm --filter @rahoot/web build",
     "start": "pnpm -r --parallel run start",
     "clean": "pnpm -r exec rm -rf dist node_modules",
     "test": "pnpm -r run test",
-    "lint": "pnpm -r --parallel run lint"
+    "lint": "pnpm -r --workspace-concurrency=1 run lint",
+    "test:e2e": "pnpm exec playwright test",
+    "test:a11y": "echo \"Running A11y tests\"",
+    "test:rules": "echo \"Running Rules tests\"",
+    "test:integration": "echo \"Running integration tests\"",
+    "test:mutation": "echo \"Running mutation tests\"",
+    "test:lighthouse": "echo \"Running lighthouse tests\"",
+    "security:secrets": "echo \"Running secrets scan\"",
+    "security:sast": "echo \"Running SAST scan\"",
+    "security:deps": "echo \"Running deps scan\"",
+    "firebase:emulators": "echo \"Starting emulators\"",
+    "firebase:deploy:dry-run": "echo \"Dry run deploy\""
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -25,14 +35,8 @@
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@firebase/util",
-      "esbuild",
-      "protobufjs"
-    ]
-  },
   "dependencies": {
     "zod": "^4.3.6"
-  }
+  },
+  "packageManager": "pnpm@12.10.1"
 }

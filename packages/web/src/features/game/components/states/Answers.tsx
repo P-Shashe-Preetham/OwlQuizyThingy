@@ -1,10 +1,7 @@
 import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import type { CommonStatusDataMap } from "@rahoot/common/types/game/status"
 import AnswerButton from "@rahoot/web/features/game/components/AnswerButton"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import {
   ANSWERS_COLORS,
@@ -25,7 +22,7 @@ const Answers = ({
   data: { type, question, answers, image, audio, video, time, totalPlayer },
 }: Props) => {
   const { gameId }: { gameId?: string } = useParams()
-  const { socket } = useSocket()
+
   const { player } = usePlayerStore()
 
   const [cooldown, setCooldown] = useState(time)
@@ -141,20 +138,13 @@ return () => window.removeEventListener("keydown", handleKeyDown)
 
     playMusic()
 
-    // eslint-disable-next-line consistent-return
+
     return () => {
       stopMusic()
     }
   }, [playMusic])
 
-  useEvent("game:cooldown", (sec) => {
-    setCooldown(sec)
-  })
 
-  useEvent("game:playerAnswer", (count) => {
-    setTotalAnswer(count)
-    sfxPop()
-  })
 
   return (
     <div className="flex h-full flex-1 flex-col justify-between">

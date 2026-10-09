@@ -1,13 +1,37 @@
 import {
-  SocketProvider,
+  FirebaseGameProvider,
   useSocket,
 } from "@rahoot/web/features/game/contexts/socketProvider"
-import { useEffect } from "react"
+import Lenis from "lenis"
+import { useEffect, useRef } from "react"
+
 import { Outlet } from "react-router"
 import ErrorBoundary from "@rahoot/web/components/ErrorBoundary"
 import Toaster from "@rahoot/web/shared/components/Toaster"
 
 const GameLayoutWrapped = () => {
+  const lenisRef = useRef<Lenis | null>(null)
+
+  useEffect(() => {
+    lenisRef.current = new Lenis({
+      lerp: 0.1,
+      smoothWheel: true,
+    })
+
+    function raf(time: number) {
+      lenisRef.current?.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+
+    return () => {
+      if (lenisRef.current) {
+        lenisRef.current.destroy()
+      }
+    }
+  }, [])
+
   const { isConnected, connect, connectionError } = useSocket()
 
   useEffect(() => {
@@ -61,7 +85,7 @@ return () => {
 }
 
 export const GameLayout = () => (
-  <SocketProvider>
+  <FirebaseGameProvider>
     <GameLayoutWrapped />
-  </SocketProvider>
+  </FirebaseGameProvider>
 )

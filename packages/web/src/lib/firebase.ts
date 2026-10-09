@@ -1,11 +1,7 @@
-// Firebase client SDK has been intentionally removed.
-// The app communicates with Firebase exclusively through the socket server.
-// If client-side Firebase features are needed in the future (e.g., auth,
-// real-time listeners), re-add the SDK here.
-//
-// To restore:
-// import { initializeApp } from "firebase/app"
-// import { getFirestore } from "firebase/firestore"
-// const firebaseConfig = { ... }
-// const app = initializeApp(firebaseConfig)
-// export const db = getFirestore(app)
+export { app } from "./firebase/app"
+export { auth } from "./firebase/auth"
+export { db } from "./firebase/firestore"
+export { rtdb } from "./firebase/database"
+export { storage } from "./firebase/storage"
+export { functions } from "./firebase/functions"
+export { initAppCheck } from "./firebase/app-check"
