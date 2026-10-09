@@ -1,5 +1,4 @@
 import type { CommonStatusDataMap } from "@rahoot/common/types/game/status"
-import { useEvent } from "@rahoot/web/features/game/contexts/socketProvider"
 import { SFX_BOUMP_SOUND } from "@rahoot/web/features/game/utils/constants"
 import clsx from "clsx"
 import { useState, useRef } from "react"
@@ -20,15 +19,7 @@ const Start = ({ data: { time, subject } }: Props) => {
     volume: 0.2,
   })
 
-  useEvent("game:startCooldown", () => {
-    sfxBoump()
-    setShowTitle(false)
-  })
 
-  useEvent("game:cooldown", (sec) => {
-    sfxBoump()
-    setCooldown(sec)
-  })
 
 
   const containerRef = useRef<HTMLElement>(null)

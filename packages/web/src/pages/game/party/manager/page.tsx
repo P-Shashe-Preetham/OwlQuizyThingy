@@ -1,8 +1,5 @@
 import GameWrapper from "@rahoot/web/features/game/components/GameWrapper"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
 import { useQuestionStore } from "@rahoot/web/features/game/stores/question"
 import {
@@ -16,7 +13,7 @@ import { useNavigate, useParams } from "react-router"
 const ManagerGamePage = () => {
   const navigate = useNavigate()
   const { gameId: gameIdParam }: { gameId?: string } = useParams()
-  const { socket } = useSocket()
+
   const { gameId, status, setGameId, setStatus, setPlayers, reset } =
     useManagerStore()
   const { setQuestionStates } = useQuestionStore()
@@ -29,7 +26,7 @@ const ManagerGamePage = () => {
 
   useEvent("connect", () => {
     if (gameIdParam) {
-      socket?.emit("manager:reconnect", { gameId: gameIdParam })
+      /* No-op */
     }
   })
 
@@ -43,12 +40,6 @@ const ManagerGamePage = () => {
     },
   )
 
-  useEvent("game:reset", (message) => {
-    navigate("/manager")
-    reset()
-    setQuestionStates(null)
-    toast.error(message)
-  })
 
   useEvent("manager:errorMessage", (message) => {
     toast.error(message)
@@ -60,7 +51,7 @@ const ManagerGamePage = () => {
     }
 
     if (isKeyOf(MANAGER_SKIP_EVENTS, status.name)) {
-      socket?.emit(MANAGER_SKIP_EVENTS[status.name], { gameId })
+      /* No-op */
     }
   }
 

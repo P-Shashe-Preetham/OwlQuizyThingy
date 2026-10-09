@@ -3,7 +3,6 @@ import { useState, useRef } from "react"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 
-import { useEvent } from "@rahoot/web/features/game/contexts/socketProvider"
 import Loader from "@rahoot/web/shared/components/Loader"
 
 type Props = {
@@ -13,9 +12,6 @@ type Props = {
 const Wait = ({ data: { text } }: Props) => {
   const [players, setPlayers] = useState(0)
 
-  useEvent("game:totalPlayers", (count) => {
-    setPlayers(count)
-  })
 
 
   const containerRef = useRef<HTMLElement>(null)

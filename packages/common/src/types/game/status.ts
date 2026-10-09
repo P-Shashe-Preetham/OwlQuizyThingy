@@ -2,6 +2,7 @@ import type { Player } from "@rahoot/common/types/game"
 
 export const GAME_STATE = {
   WAITING: "WAITING",
+  SHOW_ROOM: "SHOW_ROOM",
   SHOW_START: "SHOW_START",
   SHOW_PREPARED: "SHOW_PREPARED",
   SHOW_QUESTION: "SHOW_QUESTION",

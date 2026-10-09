@@ -1,29 +1,50 @@
-import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
+import { trackEvent } from "@rahoot/web/features/telemetry/firebase"
 import Button from "@rahoot/web/shared/components/Button"
 import Form from "@rahoot/web/shared/components/Form"
 import Input from "@rahoot/web/shared/components/Input"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import { type KeyboardEvent, useEffect, useRef, useState } from "react"
 import { useSearchParams, Link } from "react-router"
+import { functions } from "@rahoot/web/lib/firebase"
+import { httpsCallable } from "firebase/functions"
+import toast from "react-hot-toast"
 
 const Room = () => {
-  const { socket, isConnected } = useSocket()
+  const { isConnected } = useFirebaseGame()
   const { join } = usePlayerStore()
   const [invitation, setInvitation] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [searchParams] = useSearchParams()
   const hasJoinedRef = useRef(false)
 
-  const handleJoin = () => {
+  const verifyPinAndGetGameId = async (pin: string) => {
+    try {
+      const getGameByPin = httpsCallable(functions, "getGameByPin")
+      const result = await getGameByPin({ pin })
+
+
+return (result.data as { gameId: string }).gameId
+    } catch (error: any) {
+      toast.error(error.message || "Game not found")
+
+
+return null
+    }
+  }
+
+  const handleJoin = async () => {
     if (isLoading || !invitation.trim()) {return}
 
     setIsLoading(true)
-    socket?.emit("player:join", invitation.trim())
-    trackEvent("join_started", { pin: invitation.trim() })
+    const gameId = await verifyPinAndGetGameId(invitation.trim())
+
+    if (gameId) {
+      join(gameId)
+      trackEvent("join_started", { pin: invitation.trim() })
+    }
+
+    setIsLoading(false)
   }
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -32,25 +53,23 @@ const Room = () => {
     }
   }
 
-  useEvent("game:successRoom", (gameId) => {
-    setIsLoading(false)
-    join(gameId)
-  })
-
-  useEvent("game:errorMessage", () => {
-    setIsLoading(false)
-  })
-
   useEffect(() => {
     const pinCode = searchParams.get("pin")
 
-    if (!isConnected || !pinCode || hasJoinedRef.current) {
+    if (!pinCode || hasJoinedRef.current) {
       return
     }
 
-    socket?.emit("player:join", pinCode)
     hasJoinedRef.current = true
-  }, [searchParams, isConnected, socket])
+    setIsLoading(true)
+    verifyPinAndGetGameId(pinCode).then(gameId => {
+      if (gameId) {
+        join(gameId)
+      }
+
+      setIsLoading(false)
+    })
+  }, [searchParams])
 
   return (
     <Form>

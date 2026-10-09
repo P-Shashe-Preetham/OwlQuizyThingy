@@ -1,9 +1,6 @@
 import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import GameWrapper from "@rahoot/web/features/game/components/GameWrapper"
-import {
-  useEvent,
-  useSocket,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import { useQuestionStore } from "@rahoot/web/features/game/stores/question"
 import {
@@ -15,14 +12,14 @@ import { useNavigate, useParams } from "react-router"
 
 const PlayerGamePage = () => {
   const navigate = useNavigate()
-  const { socket } = useSocket()
+
   const { gameId: gameIdParam }: { gameId?: string } = useParams()
   const { status, setPlayer, setGameId, setStatus, reset } = usePlayerStore()
   const { setQuestionStates } = useQuestionStore()
 
   useEvent("connect", () => {
     if (gameIdParam) {
-      socket?.emit("player:reconnect", { gameId: gameIdParam })
+      /* No-op */
     }
   })
 
@@ -37,18 +34,7 @@ const PlayerGamePage = () => {
     },
   )
 
-  useEvent("game:status", ({ name, data }) => {
-    if (name in GAME_STATE_COMPONENTS) {
-      setStatus(name, data)
-    }
-  })
 
-  useEvent("game:reset", (message) => {
-    navigate("/")
-    reset()
-    setQuestionStates(null)
-    toast.error(message)
-  })
 
   if (!gameIdParam) {
     return null

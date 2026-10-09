@@ -1,7 +1,6 @@
 import Button from "@rahoot/web/shared/components/Button"
 import Form from "@rahoot/web/shared/components/Form"
 import Input from "@rahoot/web/shared/components/Input"
-import { useEvent } from "@rahoot/web/features/game/contexts/socketProvider"
 import { type KeyboardEvent, useState } from "react"
 import toast from "react-hot-toast"
 
@@ -26,10 +25,6 @@ const ManagerPassword = ({ onSubmit }: Props) => {
     }
   }
 
-  useEvent("manager:errorMessage", (message) => {
-    toast.error(message)
-    setIsLoading(false)
-  })
 
   return (
     <Form>

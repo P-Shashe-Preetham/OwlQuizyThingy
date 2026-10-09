@@ -4,7 +4,7 @@ import clsx from "clsx"
 import { useState, type MouseEvent } from "react"
 import { useNavigate } from "react-router"
 import toast from "react-hot-toast"
-import { useEvent, useSocket } from "@rahoot/web/features/game/contexts/socketProvider"
+import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 
 type Props = {
   quizzList: QuizzWithId[];
@@ -14,7 +14,7 @@ type Props = {
 const SelectQuizz = ({ quizzList, onSelect }: Props) => {
   const [selected, setSelected] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { socket } = useSocket()
+
 
   const handleSelect = (id: string) => () => {
     if (selected === id) {
@@ -46,14 +46,11 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
 
     // eslint-disable-next-line no-alert
     if (window.confirm("Are you sure you want to delete this quiz?")) {
-      socket?.emit("manager:deleteQuizz", id)
+      /* No-op */
     }
   }
 
 
-  useEvent("manager:errorMessage", (message) => {
-    toast.error(message)
-  })
 
   const handleSubmit = () => {
     if (!selected) {
