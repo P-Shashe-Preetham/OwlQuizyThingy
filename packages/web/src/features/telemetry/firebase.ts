@@ -1,7 +1,6 @@
-export const trackEvent = async (eventName: string, payload?: Record<string, any>) => {
-  try {
-    console.log(`[Firebase Analytics] ${eventName}`, payload);
-  } catch (error) {
-    console.error("Failed to send telemetry event", error)
-  }
+export const trackEvent = (
+  eventName: string,
+  payload?: Record<string, unknown>,
+): void => {
+  console.info(`[Firebase Analytics] ${eventName}`, payload)
 }
