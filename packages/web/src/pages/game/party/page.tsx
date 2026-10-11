@@ -10,7 +10,6 @@ import { useEffect } from "react"
 import { useParams } from "react-router"
 
 const PlayerGamePage = () => {
-
   const { gameId: gameIdParam }: { gameId?: string } = useParams()
   const { status, setPlayer, setGameId, setStatus } = usePlayerStore()
   const { setQuestionStates } = useQuestionStore()
@@ -34,8 +33,10 @@ const PlayerGamePage = () => {
       }
 
       const statusData = {
-          text: "", // Add logic to populate this correctly based on state if needed
-          ...gameState.currentQuestionData // pass down public question data
+          // Add logic to populate this correctly based on state if needed
+          text: "",
+          // Pass down public question data
+          ...gameState.currentQuestionData
       }
       setStatus(gameState.status, statusData)
 

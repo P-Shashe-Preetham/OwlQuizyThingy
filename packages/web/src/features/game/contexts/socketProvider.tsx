@@ -40,6 +40,7 @@ export const FirebaseGameProvider = ({ children }: { children: React.ReactNode }
         setClientId("")
       }
     })
+
     return () => unsubAuth()
   }, [])
 
@@ -53,13 +54,16 @@ export const FirebaseGameProvider = ({ children }: { children: React.ReactNode }
         setIsConnected(false)
       }
     })
+
     return unsub
   }, [])
 
   useEffect(() => {
     if (!gameId) {
       setGameState(null)
-      return
+
+
+return
     }
 
     const gameRef = ref(rtdb, `games/${gameId}`)
@@ -74,6 +78,7 @@ export const FirebaseGameProvider = ({ children }: { children: React.ReactNode }
       console.error("Game listener error:", error)
       setConnectionError(error.message)
     })
+
     return unsub
   }, [gameId])
 

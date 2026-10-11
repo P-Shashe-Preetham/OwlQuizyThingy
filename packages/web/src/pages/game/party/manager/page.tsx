@@ -29,7 +29,8 @@ const ManagerGamePage = () => {
       const statusData = {
           text: gameState.status === STATUS.WAIT ? "Waiting for the players" : "",
           inviteCode: gameState.inviteCode,
-          ...gameState.currentQuestionData // Provide current question data to the components
+          // Provide current question data to the components
+          ...gameState.currentQuestionData
       }
       setStatus(gameState.status, statusData)
 
@@ -42,14 +43,16 @@ const ManagerGamePage = () => {
       } else {
           setPlayers([])
       }
-
     }
   }, [gameState, setStatus, setPlayers])
 
   const handleSkip = async () => {
-    if (!gameIdParam) return
+    if (!gameIdParam) {
+      return
+    }
+
     try {
-        const advanceGame = httpsCallable(functions, "advanceGame")
+      const advanceGame = httpsCallable(functions, "advanceGame")
         await advanceGame({ gameId: gameIdParam })
     } catch (e) {
         console.error("Failed to advance game", e)

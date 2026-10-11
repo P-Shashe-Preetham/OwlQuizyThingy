@@ -88,7 +88,7 @@ const CreatorPage = () => {
     const loadingToast = toast.loading("Saving quiz...")
 
     try {
-        const saveQuiz = httpsCallable(functions, "saveQuiz")
+      const saveQuiz = httpsCallable(functions, "saveQuiz")
         await saveQuiz(quizData)
 
         toast.success("Quiz saved successfully!", { id: loadingToast })
@@ -395,7 +395,9 @@ const CreatorPage = () => {
                       currentQ.type !== "type-answer" &&
                       (() => {
                         const Icon = Icons[i]
-                        return (
+
+
+return (
                           <Icon className="w-8 h-8 text-white fill-current" />
                         )
                       })()}

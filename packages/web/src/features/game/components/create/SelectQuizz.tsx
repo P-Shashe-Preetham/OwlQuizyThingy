@@ -5,8 +5,7 @@ type Props = {
   onSelect: (quizzId: string) => void
 }
 
-const SelectQuizz = ({ quizzList, onSelect }: Props) => {
-  return (
+const SelectQuizz = ({ quizzList, onSelect }: Props) => (
     <div className="flex w-full max-w-4xl flex-col gap-6 p-4">
       <h2 className="text-center text-3xl font-black text-white drop-shadow-lg mb-4">
         Select a Quiz to Host
@@ -40,7 +39,6 @@ const SelectQuizz = ({ quizzList, onSelect }: Props) => {
         )}
       </div>
     </div>
-  )
-}
+)
 
 export default SelectQuizz

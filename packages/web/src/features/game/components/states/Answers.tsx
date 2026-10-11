@@ -42,14 +42,15 @@ const Answers = ({
   })
 
   const submitAnswer = async (answerKey: string | number) => {
-    if (!gameId) return
+    if (!gameId) {return}
 
     try {
         const submitFn = httpsCallable(functions, "submitAnswer")
         await submitFn({ gameId, answerKey })
     } catch (error: any) {
         toast.error(error.message || "Failed to submit answer")
-        setHasSubmitted(false) // Allow retry on failure
+        // Allow retry on failure
+        setHasSubmitted(false)
     }
   }
 
@@ -66,7 +67,9 @@ const Answers = ({
   const handleTextSubmit = (e: FormEvent) => {
     e.preventDefault()
 
-    if (!player || hasSubmitted || !typedAnswer.trim()) {return}
+    if (!player || hasSubmitted || !typedAnswer.trim()) {
+      return
+    }
 
     setHasSubmitted(true)
     submitAnswer(typedAnswer.trim())
@@ -116,7 +119,9 @@ const Answers = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (type === "type-answer") {return}
+      if (type === "type-answer") {
+        return
+      }
 
       const {key} = e
 

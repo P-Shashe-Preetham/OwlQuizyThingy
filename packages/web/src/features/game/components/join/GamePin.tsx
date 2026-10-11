@@ -34,7 +34,7 @@ const GamePin = () => {
       <input
         type="text"
         value={pin}
-        onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+        onChange={(e) => setPin(e.target.value.replace(/[^0-9]/gu, "").slice(0, 6))}
         className="w-full rounded-xl p-4 text-4xl font-bold text-black focus:outline-none focus:ring-4 focus:ring-primary/50 text-center tracking-[0.5em]"
         placeholder="PIN"
         autoFocus

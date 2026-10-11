@@ -9,6 +9,7 @@ if (!apiKey || !projectId) {
       "Missing required VITE_FIREBASE_API_KEY or VITE_FIREBASE_PROJECT_ID environment variables in production."
     )
   }
+
   console.warn("Missing Firebase env vars. Using demo configuration for local development.")
 }
 
