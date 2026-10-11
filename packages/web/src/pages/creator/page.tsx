@@ -2,16 +2,13 @@ import { ImageUploader } from "./ImageUploader"
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import type { Quizz, QuizzWithId } from "@rahoot/common/types/game"
-import { quizzSchema } from "@rahoot/common/validators/game"
 import Triangle from "@rahoot/web/features/game/components/icons/Triangle"
 import Rhombus from "@rahoot/web/features/game/components/icons/Rhombus"
 import Circle from "@rahoot/web/features/game/components/icons/Circle"
 import Square from "@rahoot/web/features/game/components/icons/Square"
 import { ANSWERS_COLORS } from "@rahoot/web/features/game/utils/constants"
-import {
-  useSocket,
-  useEvent,
-} from "@rahoot/web/features/game/contexts/socketProvider"
+import { functions } from "@rahoot/web/lib/firebase"
+import { httpsCallable } from "firebase/functions"
 import toast from "react-hot-toast"
 import clsx from "clsx"
 
@@ -38,7 +35,6 @@ const CreatorPage = () => {
   ])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [id, setId] = useState<string | undefined>(undefined)
-  const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (location.state?.quizz) {
@@ -49,33 +45,25 @@ const CreatorPage = () => {
       setTheme(q.settings?.theme || "default")
       setQuestions(
         q.questions.map((question) => ({
-          ...question,
           type: question.type || "quiz",
+          question: question.question,
+          answers: question.answers,
+          solution: question.solution,
+          image: question.image,
+          video: question.video,
+          audio: question.audio,
+          cooldown: question.cooldown || 5,
+          time: question.time || 15,
         })),
       )
-    } else {
-      const draft = localStorage.getItem(
-        `draft_quizz_${location.state?.quizz?.id || "new"}`,
-      )
-
-      if (draft) {
-        try {
-          const parsed = JSON.parse(draft)
-          setSubject(parsed.subject)
-          setClassicMode(parsed.settings?.classicMode || false)
-          setTheme(parsed.settings?.theme || "default")
-          setQuestions(parsed.questions)
-        } catch (e) {
-          console.warn("Failed to parse draft quiz from localStorage:", e)
-        }
-      }
     }
-  }, [location.state])
+  }, [location.state?.quizz])
 
+  // Sync draft to local storage
   useEffect(() => {
-    if (!isSaving) {
+    if (!id && !isSaving) {
       localStorage.setItem(
-        `draft_quizz_${id || "new"}`,
+        "draft_quizz",
         JSON.stringify({
           subject,
           settings: { classicMode, theme },
@@ -83,17 +71,9 @@ const CreatorPage = () => {
         }),
       )
     }
-  }, [subject, classicMode, theme, questions, isSaving])
+  }, [subject, classicMode, theme, questions, isSaving, id])
 
-
-
-  const handleSave = () => {
-    if (!socket) {
-      toast.error("Socket connection not available")
-
-      return
-    }
-
+  const handleSave = async () => {
     const quizData: Quizz & { id?: string } = {
       ...(id ? { id } : {}),
       subject,
@@ -101,31 +81,28 @@ const CreatorPage = () => {
         theme,
         classicMode,
       },
-      questions: questions.map((q) => ({
-        ...q,
-        answers: q.answers.filter((a) => a.trim() !== ""),
-      })),
-    }
-
-    const parse = quizzSchema.safeParse(quizData)
-
-    if (!parse.success) {
-      toast.error(parse.error.issues[0].message)
-
-      return
+      questions,
     }
 
     setIsSaving(true)
+    const loadingToast = toast.loading("Saving quiz...")
 
+    try {
+        const saveQuiz = httpsCallable(functions, "saveQuiz")
+        await saveQuiz(quizData)
 
-    const timeout = setTimeout(() => {
-      setIsSaving(false)
-      toast.error("Server took too long to respond")
-    }, 10000)
+        toast.success("Quiz saved successfully!", { id: loadingToast })
 
-    setSaveTimeout(timeout)
+        if (!id) {
+            localStorage.removeItem("draft_quizz")
+        }
 
-    socket.emit("manager:saveQuizz", quizData)
+        navigate("/manager")
+    } catch (error: any) {
+        toast.error(error.message || "Failed to save quiz", { id: loadingToast })
+    } finally {
+        setIsSaving(false)
+    }
   }
 
   const addQuestion = () => {
@@ -137,145 +114,82 @@ const CreatorPage = () => {
         answers: ["Option 1", "Option 2", "Option 3", "Option 4"],
         solution: 0,
         cooldown: 5,
-        time: 20,
+        time: 15,
       },
     ])
     setSelectedIdx(questions.length)
   }
 
+  const updateQuestion = (updates: Partial<PartialQuestion>) => {
+    const newQuestions = [...questions]
+    newQuestions[selectedIdx] = { ...newQuestions[selectedIdx], ...updates }
+    setQuestions(newQuestions)
+  }
+
   const removeQuestion = (idx: number) => {
-    if (questions.length <= 1) {
-      toast.error("Quiz must have at least 1 question")
-
-      return
-    }
-
-    const next = questions.filter((_, i) => i !== idx)
-    setQuestions(next)
-
-    if (selectedIdx >= next.length) {
-      setSelectedIdx(next.length - 1)
-    }
-  }
-
-  const currentQ = questions[selectedIdx] || questions[0]
-
-  const moveQuestionUp = (idx: number) => {
-    if (idx === 0) {
-      return
-    }
-
     const newQuestions = [...questions]
-    const temp = newQuestions[idx]
-    newQuestions[idx] = newQuestions[idx - 1]
-    newQuestions[idx - 1] = temp
+    newQuestions.splice(idx, 1)
     setQuestions(newQuestions)
-    setSelectedIdx(idx - 1)
+    setSelectedIdx(Math.max(0, idx - 1))
   }
 
-  const moveQuestionDown = (idx: number) => {
-    if (idx === questions.length - 1) {
-      return
-    }
-
-    const newQuestions = [...questions]
-    const temp = newQuestions[idx]
-    newQuestions[idx] = newQuestions[idx + 1]
-    newQuestions[idx + 1] = temp
-    setQuestions(newQuestions)
-    setSelectedIdx(idx + 1)
-  }
-
-  const updateQuestion = (data: Partial<PartialQuestion>) => {
-    const updated = [...questions]
-    updated[selectedIdx] = { ...updated[selectedIdx], ...data }
-    setQuestions(updated)
-  }
+  const currentQ = questions[selectedIdx]
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white overflow-hidden font-sans">
-      {/* Sidebar: Questions List */}
-      <div className="w-80 bg-slate-950 border-r border-white/10 flex flex-col z-20">
-        <div className="p-6 border-b border-white/10 flex items-center justify-between bg-slate-900/50">
-          <button
-            onClick={() => navigate("/manager")}
-            className="p-2 hover:bg-white/10 rounded-xl transition-colors text-slate-400 hover:text-white"
-            aria-label="Back to Manager Dashboard"
-          >
-            ← Back
-          </button>
-          <span className="font-extrabold text-sm uppercase tracking-widest text-primary">
-            Creator
-          </span>
+    <div className="flex h-screen bg-slate-950 text-white font-sans overflow-hidden font-display">
+      {/* Sidebar: Question List */}
+      <div className="w-80 bg-slate-900 border-r border-white/10 flex flex-col h-full z-10 shadow-2xl overflow-hidden">
+        <div className="p-6 border-b border-white/10 bg-slate-900/50 backdrop-blur-md">
+          <h2 className="text-xl font-black text-white/90 uppercase tracking-widest flex items-center gap-3">
+            <span className="w-8 h-8 rounded-lg bg-primary text-slate-900 flex items-center justify-center">
+              Q
+            </span>
+            Questions
+          </h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 space-y-1">
           {questions.map((q, idx) => (
             <div
               key={idx}
-              onClick={() => setSelectedIdx(idx)}
               className={clsx(
-                "p-4 rounded-2xl border cursor-pointer transition-all duration-200 relative group flex items-center justify-between",
+                "group relative flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300",
                 selectedIdx === idx
-                  ? "bg-primary/10 border-primary text-white shadow-lg shadow-primary/10 scale-[1.02]"
-                  : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:border-white/10",
+                  ? "bg-primary text-slate-950 shadow-lg shadow-primary/20 scale-100"
+                  : "bg-white/5 hover:bg-white/10 text-white/70 hover:scale-[1.02]",
               )}
+              onClick={() => setSelectedIdx(idx)}
               role="button"
               tabIndex={0}
-              aria-label={`Select Question ${idx + 1}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   setSelectedIdx(idx)
                 }
               }}
+              aria-label={`Select Question ${idx + 1}`}
             >
-              <div className="flex flex-col gap-1 mr-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    moveQuestionUp(idx)
-                  }}
-                  disabled={idx === 0}
-                  className="px-1 py-0 hover:bg-white/20 rounded disabled:opacity-30 disabled:cursor-not-allowed text-xs"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    moveQuestionDown(idx)
-                  }}
-                  disabled={idx === questions.length - 1}
-                  className="px-1 py-0 hover:bg-white/20 rounded disabled:opacity-30 disabled:cursor-not-allowed text-xs"
-                >
-                  ↓
-                </button>
+              <div
+                className={clsx(
+                  "font-black text-lg w-8 text-center",
+                  selectedIdx === idx ? "text-slate-900" : "text-white/30",
+                )}
+              >
+                {idx + 1}
               </div>
-              <div className="flex items-center gap-3 overflow-hidden">
-                <span
-                  className={clsx(
-                    "w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black",
-                    selectedIdx === idx
-                      ? "bg-primary text-slate-950"
-                      : "bg-white/10 text-white",
-                  )}
-                >
-                  {idx + 1}
-                </span>
-                <span className="font-bold text-sm truncate max-w-[140px]">
-                  {q.question || "Untitled Question"}
-                </span>
+              <div className="flex-1 truncate font-bold text-sm">
+                {q.question || "Empty Question"}
               </div>
-
               {questions.length > 1 && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation()
                     removeQuestion(idx)
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 text-red-400 rounded-lg transition-all"
+                  className={clsx(
+                      "opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 text-red-400 rounded-lg transition-all",
+                      selectedIdx === idx && "hover:bg-red-500/20 text-red-600"
+                  )}
                   aria-label={`Delete Question ${idx + 1}`}
                 >
                   ✕
@@ -349,7 +263,6 @@ const CreatorPage = () => {
                 onImageChange={(url) => updateQuestion({ image: url })}
                 quizzId={id || "new"}
               />
-
 
               <div className="flex flex-col gap-4 justify-center">
                 <div className="bg-slate-800 p-4 rounded-3xl border border-white/10 shadow-xl">
@@ -482,7 +395,6 @@ const CreatorPage = () => {
                       currentQ.type !== "type-answer" &&
                       (() => {
                         const Icon = Icons[i]
-
                         return (
                           <Icon className="w-8 h-8 text-white fill-current" />
                         )

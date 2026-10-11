@@ -1,7 +1,5 @@
-import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import type { CommonStatusDataMap } from "@rahoot/common/types/game/status"
 import AnswerButton from "@rahoot/web/features/game/components/AnswerButton"
-import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import {
   ANSWERS_COLORS,
@@ -13,6 +11,9 @@ import clsx from "clsx"
 import { useEffect, useState, type FormEvent } from "react"
 import { useParams } from "react-router"
 import useSound from "use-sound"
+import { functions } from "@rahoot/web/lib/firebase"
+import { httpsCallable } from "firebase/functions"
+import toast from "react-hot-toast"
 
 type Props = {
   data: CommonStatusDataMap["SELECT_ANSWER"]
@@ -25,8 +26,8 @@ const Answers = ({
 
   const { player } = usePlayerStore()
 
-  const [cooldown, setCooldown] = useState(time)
-  const [totalAnswer, setTotalAnswer] = useState(0)
+  const [cooldown] = useState(time)
+  const [totalAnswer] = useState(0)
   const [typedAnswer, setTypedAnswer] = useState("")
   const [hasSubmitted, setHasSubmitted] = useState(false)
 
@@ -40,19 +41,25 @@ const Answers = ({
     loop: true,
   })
 
+  const submitAnswer = async (answerKey: string | number) => {
+    if (!gameId) return
+
+    try {
+        const submitFn = httpsCallable(functions, "submitAnswer")
+        await submitFn({ gameId, answerKey })
+    } catch (error: any) {
+        toast.error(error.message || "Failed to submit answer")
+        setHasSubmitted(false) // Allow retry on failure
+    }
+  }
+
   const handleAnswer = (answerKey: number) => () => {
     if (!player || hasSubmitted) {
       return
     }
 
-    socket?.emit("player:selectedAnswer", {
-      gameId,
-      data: {
-        answerKey,
-      },
-    })
     setHasSubmitted(true)
-    trackEvent("answer_submitted", { answerKey })
+    submitAnswer(answerKey)
     sfxPop()
   }
 
@@ -61,12 +68,8 @@ const Answers = ({
 
     if (!player || hasSubmitted || !typedAnswer.trim()) {return}
 
-    socket?.emit("player:selectedAnswer", {
-      gameId,
-      data: { answerKey: typedAnswer.trim() },
-    })
     setHasSubmitted(true)
-    trackEvent("answer_submitted", { answerKey: typedAnswer.trim() })
+    submitAnswer(typedAnswer.trim())
     sfxPop()
   }
 
@@ -127,8 +130,7 @@ const Answers = ({
     }
     window.addEventListener("keydown", handleKeyDown)
 
-
-return () => window.removeEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [player, hasSubmitted, answers.length, type])
 
   useEffect(() => {
@@ -138,13 +140,10 @@ return () => window.removeEventListener("keydown", handleKeyDown)
 
     playMusic()
 
-
     return () => {
       stopMusic()
     }
   }, [playMusic])
-
-
 
   return (
     <div className="flex h-full flex-1 flex-col justify-between">

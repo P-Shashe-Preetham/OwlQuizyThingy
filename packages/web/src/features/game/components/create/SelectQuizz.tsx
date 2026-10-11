@@ -1,133 +1,44 @@
 import type { QuizzWithId } from "@rahoot/common/types/game"
-import Button from "@rahoot/web/shared/components/Button"
-import clsx from "clsx"
-import { useState, type MouseEvent } from "react"
-import { useNavigate } from "react-router"
-import toast from "react-hot-toast"
-import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 
 type Props = {
-  quizzList: QuizzWithId[];
-  onSelect: (_id: string) => void;
-};
+  quizzList: QuizzWithId[]
+  onSelect: (quizzId: string) => void
+}
 
 const SelectQuizz = ({ quizzList, onSelect }: Props) => {
-  const [selected, setSelected] = useState<string | null>(null)
-  const navigate = useNavigate()
-
-
-  const handleSelect = (id: string) => () => {
-    if (selected === id) {
-      setSelected(null)
-    } else {
-      setSelected(id)
-    }
-  }
-
-  const handleEdit = (quizz: QuizzWithId, e: MouseEvent) => {
-    e.stopPropagation()
-    navigate("/creator", { state: { quizz } })
-  }
-
-  const handleDuplicate = (quizz: QuizzWithId, e: MouseEvent) => {
-    e.stopPropagation()
-    // Omit the id and append " (Copy)" to the subject
-    const { id: _id, ...duplicatedQuiz } = quizz
-    void _id
-    navigate("/creator", {
-      state: {
-        quizz: { ...duplicatedQuiz, subject: `${quizz.subject} (Copy)` },
-      },
-    })
-  }
-
-  const handleDelete = (id: string, e: MouseEvent) => {
-    e.stopPropagation()
-
-    // eslint-disable-next-line no-alert
-    if (window.confirm("Are you sure you want to delete this quiz?")) {
-      /* No-op */
-    }
-  }
-
-
-
-  const handleSubmit = () => {
-    if (!selected) {
-      toast.error("Please select a quizz")
-
-      return
-    }
-
-    onSelect(selected)
-  }
-
   return (
-    <div className="z-10 flex w-full max-w-md flex-col gap-4 rounded-md bg-white p-4 shadow-sm">
-      <div className="flex flex-col items-center justify-center">
-        <h1 className="mb-2 text-2xl font-bold">Select a quiz</h1>
-        {quizzList.length === 0 ? (
-          <div className="flex w-full flex-col items-center gap-3 rounded-md bg-gray-50 p-6 text-center">
-            <span className="text-4xl">📭</span>
-            <p className="text-gray-600 font-semibold">No quizzes available</p>
-            <p className="text-sm text-gray-400">
-              Create a quiz first using the quiz creator.
-            </p>
-            <button
-              onClick={() => navigate("/creator")}
-              className="mt-2 rounded-md bg-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-300 transition-colors cursor-pointer"
-            >
-              + Create Quiz
-            </button>
+    <div className="flex w-full max-w-4xl flex-col gap-6 p-4">
+      <h2 className="text-center text-3xl font-black text-white drop-shadow-lg mb-4">
+        Select a Quiz to Host
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {quizzList.map((quiz) => (
+          <div
+            key={quiz.id}
+            onClick={() => onSelect(quiz.id)}
+            role="button"
+            tabIndex={0}
+            className="group relative flex flex-col items-center justify-center gap-4 rounded-3xl bg-white/10 p-8 shadow-xl transition-all duration-300 hover:scale-105 hover:bg-white/20 hover:shadow-2xl cursor-pointer border border-white/20"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                onSelect(quiz.id)
+              }
+            }}
+          >
+            <div className="text-center text-2xl font-bold text-white group-hover:text-primary transition-colors">
+              {quiz.subject}
+            </div>
+            <div className="text-white/60 text-sm font-semibold">
+              {quiz.questions.length} Question{quiz.questions.length !== 1 && "s"}
+            </div>
           </div>
-        ) : (
-          <div className="w-full space-y-2">
-            {quizzList.map((quizz) => (
-              <div
-                key={quizz.id}
-                className={clsx(
-                  "flex w-full items-center justify-between rounded-md p-3 outline outline-gray-300 transition-colors hover:bg-gray-50 cursor-pointer",
-                  selected === quizz.id && "bg-blue-50/50",
-                )}
-                onClick={handleSelect(quizz.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={clsx(
-                      "h-5 w-5 rounded outline outline-offset-3 outline-gray-300",
-                      selected === quizz.id &&
-                        "bg-primary border-primary/80 shadow-inset",
-                    )}
-                  ></div>
-                  <span className="font-bold">{quizz.subject}</span>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded font-semibold text-gray-700 transition-colors cursor-pointer"
-                    onClick={(e) => handleEdit(quizz, e)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded font-semibold text-gray-700 transition-colors cursor-pointer"
-                    onClick={(e) => handleDuplicate(quizz, e)}
-                  >
-                    Duplicate
-                  </button>
-                  <button
-                    className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded font-semibold text-red-600 transition-colors cursor-pointer"
-                    onClick={(e) => handleDelete(quizz.id, e)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+        ))}
+        {quizzList.length === 0 && (
+          <div className="col-span-full text-center text-white/50 text-xl font-bold py-12">
+            No quizzes found. Create one to get started!
           </div>
         )}
       </div>
-      {quizzList.length > 0 && <Button onClick={handleSubmit}>Submit</Button>}
     </div>
   )
 }

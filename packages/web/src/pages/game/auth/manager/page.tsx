@@ -7,7 +7,7 @@ import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
 import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router"
 import { auth, db, functions } from "@rahoot/web/lib/firebase"
-import { signInWithEmailAndPassword, onAuthStateChanged, type User } from "firebase/auth"
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"
 import { collection, getDocs } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions"
 import toast from "react-hot-toast"
@@ -16,7 +16,6 @@ const ManagerAuthPage = () => {
   const { setGameId, setStatus } = useManagerStore()
   const navigate = useNavigate()
 
-  const [user, setUser] = useState<User | null>(null)
   const [isAuth, setIsAuth] = useState(false)
   const [quizzList, setQuizzList] = useState<QuizzWithId[]>([])
   const [selectedQuizzId, setSelectedQuizzId] = useState<string | null>(null)
@@ -24,8 +23,6 @@ const ManagerAuthPage = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
-
       if (currentUser && !currentUser.isAnonymous) {
         setIsAuth(true)
         fetchQuizzes()
@@ -36,8 +33,7 @@ const ManagerAuthPage = () => {
       setIsLoading(false)
     })
 
-
-return () => unsubscribe()
+    return () => unsubscribe()
   }, [])
 
   const fetchQuizzes = async () => {
@@ -66,7 +62,7 @@ return () => unsubscribe()
     setSelectedQuizzId(quizzId)
   }
 
-  const handleConfirmSettings = async (quizzId: string, settings: any) => {
+  const handleConfirmSettings = async (quizzId: string) => {
     try {
       const createGame = httpsCallable(functions, "createGame")
       const result = await createGame({ quizzId })

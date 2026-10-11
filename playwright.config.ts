@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm start',
+    command: 'VITE_FIREBASE_API_KEY="test" VITE_FIREBASE_PROJECT_ID="rahoot-test" pnpm --filter @rahoot/web run dev --port 3000',
     url: 'http://localhost:3000',
     timeout: 120000,
     reuseExistingServer: !process.env.CI,

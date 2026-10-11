@@ -79,7 +79,8 @@ export function isKeyOf<T extends object>(
   return key in obj
 }
 
-export const MANAGER_SKIP_BTN = {
+export const MANAGER_SKIP_BTN: Record<string, string | null> = {
+  [STATUS.WAITING]: null,
   [STATUS.SHOW_ROOM]: "Start Game",
   [STATUS.SHOW_START]: null,
   [STATUS.SHOW_PREPARED]: null,
@@ -90,4 +91,18 @@ export const MANAGER_SKIP_BTN = {
   [STATUS.SHOW_LEADERBOARD]: "Next",
   [STATUS.FINISHED]: null,
   [STATUS.WAIT]: null,
+}
+export const GAME_STATE_BACKGROUND: Record<string, string> = {
+  [STATUS.WAITING]: "bg-rahoot-blue",
+  [STATUS.CANCELLED]: "bg-rahoot-blue",
+  [STATUS.WAIT]: "bg-rahoot-blue",
+  [STATUS.SHOW_ROOM]: "bg-rahoot-blue",
+  [STATUS.SHOW_START]: "bg-rahoot-blue",
+  [STATUS.SHOW_PREPARED]: "bg-rahoot-blue",
+  [STATUS.SHOW_QUESTION]: "bg-rahoot-blue",
+  [STATUS.SELECT_ANSWER]: "bg-rahoot-blue",
+  [STATUS.SHOW_RESPONSES]: "bg-rahoot-blue",
+  [STATUS.SHOW_LEADERBOARD]: "bg-rahoot-blue",
+  [STATUS.FINISHED]: "bg-rahoot-blue",
+  [STATUS.SHOW_RESULT]: "bg-rahoot-blue",
 }

@@ -1,9 +1,11 @@
 import type { Player } from "@rahoot/common/types/game"
 import type { ManagerStatusDataMap } from "@rahoot/common/types/game/status"
-import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
 import { useState } from "react"
 import QRCode from "react-qr-code"
+import { functions } from "@rahoot/web/lib/firebase"
+import { httpsCallable } from "firebase/functions"
+import toast from "react-hot-toast"
 
 type Props = {
   data: ManagerStatusDataMap["SHOW_ROOM"]
@@ -14,22 +16,20 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
 
   const webUrl = window.location.origin
   const { players } = useManagerStore()
-  const [playerList, setPlayerList] = useState<Player[]>(players)
-  const [totalPlayers, setTotalPlayers] = useState(0)
+  const [playerList] = useState<Player[]>(players)
+  const [totalPlayers] = useState(0)
 
-
-
-
-
-  const handleKick = (playerId: string) => () => {
+  const handleKick = (playerId: string) => async () => {
     if (!gameId) {
       return
     }
 
-    socket?.emit("manager:kickPlayer", {
-      gameId,
-      playerId,
-    })
+    try {
+        const kickPlayer = httpsCallable(functions, "kickPlayer")
+        await kickPlayer({ gameId, playerId })
+    } catch (error: any) {
+        toast.error(error.message || "Failed to kick player")
+    }
   }
 
   return (
