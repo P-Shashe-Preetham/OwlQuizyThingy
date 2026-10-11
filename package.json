@@ -12,7 +12,7 @@
     "typecheck": "pnpm --filter @rahoot/web tsc --noEmit && pnpm --filter @rahoot/common tsc --noEmit && pnpm --filter functions tsc --noEmit",
     "test:e2e": "pnpm exec playwright test",
     "test:a11y": "pnpm exec playwright test --grep @a11y",
-    "test:rules": "firebase emulators:exec --only firestore,database \"pnpm test --filter functions\"",
+    "test:rules": "firebase emulators:exec --only firestore,database,storage \"pnpm --filter rules test\"",
     "test:integration": "pnpm test --filter functions",
     "security:secrets": "gitleaks detect --source . -v",
     "security:sast": "semgrep scan --config auto .",
@@ -23,10 +23,12 @@
     "@axe-core/playwright": "^4.13.0",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
+    "@firebase/rules-unit-testing": "6.0.0",
     "@playwright/test": "^1.63.0",
     "@types/node-fetch": "^2.6.13",
     "@vitest/coverage-v8": "^5.0.3",
     "dotenv-cli": "^11.0.0",
+    "firebase-tools": "15.33.0",
     "lefthook": "^2.1.17",
     "playwright": "^1.63.0",
     "typescript": "^5.9.3",
@@ -35,5 +37,16 @@
   "dependencies": {
     "zod": "^4.3.6"
   },
-  "packageManager": "pnpm@12.10.1"
+  "packageManager": "pnpm@12.10.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@firebase/util",
+      "esbuild",
+      "protobufjs",
+      "unrs-resolver",
+      "lefthook",
+      "re2"
+    ]
+  }
 }
