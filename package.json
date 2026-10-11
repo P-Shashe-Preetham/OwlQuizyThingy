@@ -37,5 +37,16 @@
   "dependencies": {
     "zod": "^4.3.6"
   },
-  "packageManager": "pnpm@12.10.1"
+  "packageManager": "pnpm@12.10.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@firebase/util",
+      "esbuild",
+      "protobufjs",
+      "unrs-resolver",
+      "lefthook",
+      "re2"
+    ]
+  }
 }
