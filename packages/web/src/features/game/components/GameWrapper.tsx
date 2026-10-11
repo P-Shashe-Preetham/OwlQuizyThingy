@@ -5,10 +5,9 @@ import Loader from "@rahoot/web/shared/components/Loader"
 import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
 import { useQuestionStore } from "@rahoot/web/features/game/stores/question"
-import { MANAGER_SKIP_BTN } from "@rahoot/web/features/game/utils/constants"
+import { MANAGER_SKIP_BTN, GAME_STATE_BACKGROUND } from "@rahoot/web/features/game/utils/constants"
 import clsx from "clsx"
 import { type PropsWithChildren, useEffect, useState } from "react"
-
 
 type Props = PropsWithChildren & {
   statusName: Status | undefined
@@ -23,7 +22,9 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
   const [isDisabled, setIsDisabled] = useState(false)
   const [bypassedLoader, setBypassedLoader] = useState(false)
   const [gameError, setGameError] = useState<string | null>(null)
-  const next = statusName ? MANAGER_SKIP_BTN[statusName] : null
+
+  const next = statusName && MANAGER_SKIP_BTN[statusName] ? MANAGER_SKIP_BTN[statusName] : null
+  const currentBackground = statusName && GAME_STATE_BACKGROUND[statusName] ? GAME_STATE_BACKGROUND[statusName] : "bg-rahoot-blue"
 
   useEffect(() => {
     setIsDisabled(false)
@@ -35,10 +36,10 @@ const GameWrapper = ({ children, statusName, onNext, manager }: Props) => {
   }
 
   return (
-    <section className="relative min-h-dvh flex">
+    <section className={clsx("relative min-h-dvh flex transition-colors duration-1000", currentBackground)}>
       <div className="fixed top-0 left-0 h-full w-full">
         <img
-          className="pointer-events-none h-full w-full object-cover"
+          className="pointer-events-none h-full w-full object-cover opacity-50"
           src={background}
           alt="background"
         />

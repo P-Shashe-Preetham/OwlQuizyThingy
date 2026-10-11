@@ -1,4 +1,3 @@
-import { trackEvent } from "@rahoot/web/features/telemetry/tinybird"
 import GameWrapper from "@rahoot/web/features/game/components/GameWrapper"
 import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { usePlayerStore } from "@rahoot/web/features/game/stores/player"
@@ -7,34 +6,45 @@ import {
   GAME_STATE_COMPONENTS,
   isKeyOf,
 } from "@rahoot/web/features/game/utils/constants"
-import toast from "react-hot-toast"
-import { useNavigate, useParams } from "react-router"
+import { useEffect } from "react"
+import { useParams } from "react-router"
 
 const PlayerGamePage = () => {
-  const navigate = useNavigate()
-
   const { gameId: gameIdParam }: { gameId?: string } = useParams()
-  const { status, setPlayer, setGameId, setStatus, reset } = usePlayerStore()
+  const { status, setPlayer, setGameId, setStatus } = usePlayerStore()
   const { setQuestionStates } = useQuestionStore()
 
-  useEvent("connect", () => {
+  const { gameState, clientId } = useFirebaseGame()
+
+  useEffect(() => {
     if (gameIdParam) {
-      /* No-op */
+      setGameId(gameIdParam)
     }
-  })
+  }, [gameIdParam, setGameId])
 
-  useEvent(
-    "player:successReconnect",
-    ({ gameId, status, player, currentQuestion }) => {
-      setGameId(gameId)
-      setStatus(status.name, status.data)
-      setPlayer(player)
-      setQuestionStates(currentQuestion)
-      trackEvent("reconnect_success", { gameId })
-    },
-  )
+  useEffect(() => {
+    if (gameState && clientId) {
+      // Find current player in game state
+      if (gameState.players && gameState.players[clientId]) {
+          setPlayer({
+              id: clientId,
+              ...gameState.players[clientId]
+          })
+      }
 
+      const statusData = {
+          // Add logic to populate this correctly based on state if needed
+          text: "",
+          // Pass down public question data
+          ...gameState.currentQuestionData
+      }
+      setStatus(gameState.status, statusData)
 
+      if (gameState.currentQuestionData) {
+          setQuestionStates(gameState.currentQuestionData)
+      }
+    }
+  }, [gameState, clientId, setStatus, setPlayer, setQuestionStates])
 
   if (!gameIdParam) {
     return null

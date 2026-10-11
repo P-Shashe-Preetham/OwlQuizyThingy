@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react"
 import { rtdb, auth } from "@rahoot/web/lib/firebase"
-import { ref, onValue, off } from "firebase/database"
+import { ref, onValue } from "firebase/database"
 import { usePlayerStore } from "../stores/player"
 import { useManagerStore } from "../stores/manager"
 import { onAuthStateChanged } from "firebase/auth"
@@ -41,8 +41,7 @@ export const FirebaseGameProvider = ({ children }: { children: React.ReactNode }
       }
     })
 
-
-return () => unsubAuth()
+    return () => unsubAuth()
   }, [])
 
   useEffect(() => {
@@ -56,7 +55,7 @@ return () => unsubAuth()
       }
     })
 
-    return () => off(connectedRef, "value", unsub)
+    return unsub
   }, [])
 
   useEffect(() => {
@@ -68,7 +67,6 @@ return
     }
 
     const gameRef = ref(rtdb, `games/${gameId}`)
-
     const unsub = onValue(gameRef, (snapshot) => {
       if (snapshot.exists()) {
         setGameState(snapshot.val())
@@ -81,7 +79,7 @@ return
       setConnectionError(error.message)
     })
 
-    return () => off(gameRef, "value", unsub)
+    return unsub
   }, [gameId])
 
   const reconnect = () => {
@@ -104,19 +102,3 @@ return
 }
 
 export const useFirebaseGame = () => useContext(FirebaseGameContext)
-
-export const useSocket = () => {
-  const { isConnected, connectionError, reconnect } = useFirebaseGame()
-
-
-return {
-    socket: null,
-    isConnected,
-    connectionError,
-    connect: () => { /* No-op */ },
-    disconnect: () => { /* No-op */ },
-    reconnect
-  }
-}
-
-export const useEvent = () => { /* No-op */ }

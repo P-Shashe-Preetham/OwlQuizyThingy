@@ -1,57 +1,61 @@
 import GameWrapper from "@rahoot/web/features/game/components/GameWrapper"
 import { useFirebaseGame } from "@rahoot/web/features/game/contexts/socketProvider"
 import { useManagerStore } from "@rahoot/web/features/game/stores/manager"
-import { useQuestionStore } from "@rahoot/web/features/game/stores/question"
 import {
   GAME_STATE_COMPONENTS_MANAGER,
-  MANAGER_SKIP_EVENTS,
   isKeyOf,
 } from "@rahoot/web/features/game/utils/constants"
-import toast from "react-hot-toast"
-import { useNavigate, useParams } from "react-router"
+import { useEffect } from "react"
+import { useParams } from "react-router"
+import { STATUS } from "@rahoot/common/types/game/status"
+import { functions } from "@rahoot/web/lib/firebase"
+import { httpsCallable } from "firebase/functions"
 
 const ManagerGamePage = () => {
-  const navigate = useNavigate()
   const { gameId: gameIdParam }: { gameId?: string } = useParams()
 
-  const { gameId, status, setGameId, setStatus, setPlayers, reset } =
+  const { gameState } = useFirebaseGame()
+  const { setGameId, setStatus, setPlayers, status } =
     useManagerStore()
-  const { setQuestionStates } = useQuestionStore()
 
-  useEvent("game:status", ({ name, data }) => {
-    if (name in GAME_STATE_COMPONENTS_MANAGER) {
-      setStatus(name, data)
-    }
-  })
-
-  useEvent("connect", () => {
+  useEffect(() => {
     if (gameIdParam) {
-      /* No-op */
+      setGameId(gameIdParam)
     }
-  })
+  }, [gameIdParam, setGameId])
 
-  useEvent(
-    "manager:successReconnect",
-    ({ gameId, status, players, currentQuestion }) => {
-      setGameId(gameId)
-      setStatus(status.name, status.data)
-      setPlayers(players)
-      setQuestionStates(currentQuestion)
-    },
-  )
+  useEffect(() => {
+    if (gameState) {
+      const statusData = {
+          text: gameState.status === STATUS.WAIT ? "Waiting for the players" : "",
+          inviteCode: gameState.inviteCode,
+          // Provide current question data to the components
+          ...gameState.currentQuestionData
+      }
+      setStatus(gameState.status, statusData)
 
+      if (gameState.players) {
+          const playersList = Object.entries(gameState.players).map(([id, data]: [string, any]) => ({
+              id,
+              ...data
+          }))
+          setPlayers(playersList)
+      } else {
+          setPlayers([])
+      }
+    }
+  }, [gameState, setStatus, setPlayers])
 
-  useEvent("manager:errorMessage", (message) => {
-    toast.error(message)
-  })
-
-  const handleSkip = () => {
-    if (!gameId || !status) {
+  const handleSkip = async () => {
+    if (!gameIdParam) {
       return
     }
 
-    if (isKeyOf(MANAGER_SKIP_EVENTS, status.name)) {
-      /* No-op */
+    try {
+      const advanceGame = httpsCallable(functions, "advanceGame")
+        await advanceGame({ gameId: gameIdParam })
+    } catch (e) {
+        console.error("Failed to advance game", e)
     }
   }
 
@@ -60,9 +64,21 @@ const ManagerGamePage = () => {
       ? GAME_STATE_COMPONENTS_MANAGER[status.name]
       : null
 
+  if (!gameIdParam) {
+    return null
+  }
+
   return (
-    <GameWrapper statusName={status?.name} onNext={handleSkip} manager>
+    <GameWrapper statusName={status?.name} manager={true}>
       {CurrentComponent && <CurrentComponent data={status!.data as never} />}
+
+      <button
+        onClick={handleSkip}
+        className="absolute right-2 bottom-2 md:right-10 md:bottom-10 z-10 font-bold bg-white text-black p-2 md:p-4 rounded-md shadow-2xl hover:scale-105 active:scale-95 transition-transform"
+      >
+        <span className="hidden md:inline">Next Step </span>{" "}
+        <span className="translate-y-1">⏭️</span>
+      </button>
     </GameWrapper>
   )
 }
