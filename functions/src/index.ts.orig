@@ -1,0 +1,392 @@
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+import { v4 as uuidv4 } from "uuid";
+import { createInviteCode } from "./gameUtils.js";
+import { STATUS } from "@rahoot/common/types/game/status";
+import { quizzWithOptionalIdSchema, playerLoginSchema, selectedAnswerSchema, kickPlayerSchema } from "@rahoot/common/validators/game";
+
+admin.initializeApp();
+const db = admin.database();
+const firestore = admin.firestore();
+
+// Middleware-ish check for auth
+const requireAuth = (request: any) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "User must be logged in.");
+  }
+};
+
+export const saveQuiz = onCall(async (request) => {
+  requireAuth(request);
+
+  const parsedData = quizzWithOptionalIdSchema.safeParse(request.data);
+
+  if (!parsedData.success) {
+      throw new HttpsError("invalid-argument", "Missing or invalid required quiz data.");
+  }
+
+  const { id, subject, settings, questions } = parsedData.data;
+
+  const quizId = id || uuidv4();
+
+  // Protect existing quiz ownership
+  if (id) {
+      const quizDoc = await firestore.collection("quizzes").doc(id).get();
+      if (quizDoc.exists && quizDoc.data()?.managerUid !== request.auth?.uid) {
+          throw new HttpsError("permission-denied", "You can only update your own quizzes");
+      }
+  }
+
+  await firestore.collection("quizzes").doc(quizId).set({
+      subject,
+      settings: settings || {},
+      questions,
+      managerUid: request.auth?.uid,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  return { success: true, id: quizId };
+});
+
+export const deleteQuiz = onCall(async (request) => {
+    requireAuth(request);
+    const { id } = request.data;
+
+    if (!id || typeof id !== "string") {
+        throw new HttpsError("invalid-argument", "Quiz ID is required");
+    }
+
+    const quizRef = firestore.collection("quizzes").doc(id);
+    const doc = await quizRef.get();
+
+    if (!doc.exists) {
+        throw new HttpsError("not-found", "Quiz not found");
+    }
+
+    if (doc.data()?.managerUid !== request.auth?.uid) {
+        throw new HttpsError("permission-denied", "You can only delete your own quizzes");
+    }
+
+    await quizRef.delete();
+    return { success: true };
+})
+
+
+export const createGame = onCall(async (request) => {
+  requireAuth(request);
+
+  const { quizzId } = request.data;
+  if (!quizzId || typeof quizzId !== "string") throw new HttpsError("invalid-argument", "Missing or invalid quizzId");
+
+  // Fetch Quiz
+  const quizDoc = await firestore.collection("quizzes").doc(quizzId).get();
+  if (!quizDoc.exists) throw new HttpsError("not-found", "Quiz not found");
+
+  const quizData = quizDoc.data();
+
+  if (quizData?.managerUid && quizData?.managerUid !== request.auth?.uid) {
+      throw new HttpsError("permission-denied", "You can only create games from your own quizzes.");
+  }
+
+  const gameId = uuidv4();
+  const inviteCode = await createInviteCode();
+
+  const gameRef = db.ref(`games/${gameId}`);
+  await gameRef.set({
+    gameId,
+    quizId: quizzId, // Normalized to quizId
+    subject: quizData?.subject || "Untitled",
+    managerUid: request.auth?.uid,
+    inviteCode,
+    status: STATUS.WAIT,
+    currentQuestionIndex: 0,
+    startedAt: admin.database.ServerValue.TIMESTAMP,
+    updatedAt: admin.database.ServerValue.TIMESTAMP,
+    players: {},
+    answers: {},
+    leaderboard: {}
+  });
+
+  // Map invite code for easy joining
+  await db.ref(`gamesByInviteCode/${inviteCode}`).set({
+    gameId,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+  });
+
+  return { gameId, inviteCode };
+});
+
+export const getGameByPin = onCall(async (request) => {
+  const { pin } = request.data;
+  if (!pin || typeof pin !== "string" || pin.length !== 6) throw new HttpsError("invalid-argument", "Missing or invalid PIN");
+
+  const snapshot = await db.ref(`gamesByInviteCode/${pin}`).get();
+  if (!snapshot.exists()) throw new HttpsError("not-found", "Game not found");
+
+  const data = snapshot.val();
+  if (data.expiresAt < Date.now()) {
+      throw new HttpsError("failed-precondition", "Game PIN expired");
+  }
+
+  return { gameId: data.gameId };
+});
+
+export const joinGame = onCall(async (request) => {
+  requireAuth(request);
+  const parsed = playerLoginSchema.safeParse(request.data);
+  if (!parsed.success) {
+      throw new HttpsError("invalid-argument", "Invalid parameters");
+  }
+  const { gameId, data: { username } } = parsed.data;
+
+  const uid = request.auth?.uid;
+  const gameRef = db.ref(`games/${gameId}`);
+
+  // Try to use a transaction to avoid concurrent join issues
+  const { committed, snapshot } = await gameRef.transaction((game) => {
+      if (!game) return undefined; // abort
+      if (game.status !== STATUS.WAIT) return undefined; // abort
+
+      if (!game.players) game.players = {};
+
+      // Optionally check for duplicate names here
+
+      game.players[uid!] = {
+          username,
+          points: 0,
+          connected: true,
+          joinedAt: admin.database.ServerValue.TIMESTAMP,
+      };
+
+      return game;
+  });
+
+  if (!committed) {
+       const game = (await gameRef.get()).val();
+       if (!game) {
+           throw new HttpsError("not-found", "Game not found");
+       }
+       if (game.status !== STATUS.WAIT) {
+           throw new HttpsError("failed-precondition", "Game has already started or finished");
+       }
+       throw new HttpsError("internal", "Failed to join game due to concurrent modifications.");
+  }
+
+  return { success: true };
+});
+
+export const kickPlayer = onCall(async (request) => {
+    requireAuth(request);
+    const parsed = kickPlayerSchema.safeParse(request.data);
+    if (!parsed.success) {
+        throw new HttpsError("invalid-argument", "gameId and playerId are required");
+    }
+    const { gameId, playerId } = parsed.data;
+
+    const gameRef = db.ref(`games/${gameId}`);
+    const snap = await gameRef.get();
+    const game = snap.val();
+
+    if (!game) throw new HttpsError("not-found", "Game not found");
+    if (game.managerUid !== request.auth?.uid) {
+        throw new HttpsError("permission-denied", "Only manager can kick players");
+    }
+
+    await gameRef.child("players").child(playerId).remove();
+    return { success: true };
+})
+
+
+export const submitAnswer = onCall(async (request) => {
+  requireAuth(request);
+  const parsed = selectedAnswerSchema.safeParse(request.data);
+  if (!parsed.success) {
+      throw new HttpsError("invalid-argument", "Missing or invalid gameId or answerKey");
+  }
+  const { gameId, data: { answerKey } } = parsed.data;
+  const uid = request.auth?.uid;
+
+
+  const gameRef = db.ref(`games/${gameId}`);
+  const snap = await gameRef.get();
+
+  if (!snap.exists()) {
+      throw new HttpsError("not-found", "Game not found");
+  }
+
+  const { committed } = await gameRef.transaction((game) => {
+    if (!game) return undefined; // abort transaction
+
+    // Ensure player is in game
+    if (!game.players || !game.players[uid!]) return undefined; // abort
+
+    // If already submitted, return early successfully (idempotent retry)
+    if (game.answers && game.answers[game.currentQuestionIndex] && game.answers[game.currentQuestionIndex][uid!]) {
+        return undefined; // We actually abort the write but we'll check it afterward
+    }
+    if (game.status !== STATUS.SELECT_ANSWER) return undefined; // Abort transaction
+
+    if (!game.answers) game.answers = {};
+    if (!game.answers[game.currentQuestionIndex]) game.answers[game.currentQuestionIndex] = {};
+
+    // Prevent duplicate submission
+    if (game.answers[game.currentQuestionIndex][uid!]) return undefined; // abort
+
+    game.answers[game.currentQuestionIndex][uid!] = {
+      answer: answerKey,
+      submittedAt: admin.database.ServerValue.TIMESTAMP
+    };
+
+    return game;
+  });
+
+  if (!committed) {
+      const currentGame = (await gameRef.get()).val();
+      if (!currentGame) {
+          throw new HttpsError("not-found", "Game not found");
+      }
+      if (currentGame.status !== STATUS.SELECT_ANSWER) {
+          throw new HttpsError("failed-precondition", "Game is not in answering phase");
+      }
+      if (currentGame.answers?.[currentGame.currentQuestionIndex]?.[uid!]) {
+          throw new HttpsError("already-exists", "Answer already submitted");
+      }
+      if (!currentGame.players || !currentGame.players[uid!]) {
+          throw new HttpsError("permission-denied", "Player is not in this game");
+      }
+      throw new HttpsError("internal", "Failed to submit answer due to concurrent modifications.");
+  }
+
+  return { success: true };
+});
+
+export const advanceGame = onCall(async (request) => {
+  requireAuth(request);
+  const { gameId } = request.data;
+  if (!gameId || typeof gameId !== "string") {
+      throw new HttpsError("invalid-argument", "Missing or invalid gameId");
+  }
+
+  const gameRef = db.ref(`games/${gameId}`);
+  const snap = await gameRef.get();
+  const game = snap.val();
+
+  if (!game) throw new HttpsError("not-found", "Game not found");
+
+  if (game.managerUid !== request.auth?.uid) throw new HttpsError("permission-denied", "Only manager can advance");
+
+  let nextStatus: string = STATUS.WAIT;
+
+  if (game.status === STATUS.WAIT) nextStatus = STATUS.SHOW_START;
+  else if (game.status === STATUS.SHOW_START) nextStatus = STATUS.SHOW_PREPARED;
+  else if (game.status === STATUS.SHOW_PREPARED) nextStatus = STATUS.SHOW_QUESTION;
+  else if (game.status === STATUS.SHOW_QUESTION) nextStatus = STATUS.SELECT_ANSWER;
+  else if (game.status === STATUS.SELECT_ANSWER) nextStatus = STATUS.SHOW_RESPONSES;
+  else if (game.status === STATUS.SHOW_RESPONSES) nextStatus = STATUS.SHOW_LEADERBOARD;
+  else if (game.status === STATUS.SHOW_LEADERBOARD) {
+    // Check if more questions
+    // This requires reading the quiz from Firestore to know total questions
+    const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
+    const total = quizDoc.data()?.questions.length || 0;
+
+    if (game.currentQuestionIndex + 1 < total) {
+      game.currentQuestionIndex += 1;
+      nextStatus = STATUS.SHOW_PREPARED;
+    } else {
+      nextStatus = STATUS.FINISHED;
+    }
+  }
+
+  // Calculate scoring if transitioning out of SELECT_ANSWER
+  const newPlayers = { ...game.players };
+  if (game.status === STATUS.SELECT_ANSWER && nextStatus === STATUS.SHOW_RESPONSES) {
+      const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
+      const qData = quizDoc.data()?.questions[game.currentQuestionIndex];
+
+      const currentAnswers = game.answers?.[game.currentQuestionIndex] || {};
+
+      for (const [uid, answerData] of Object.entries<any>(currentAnswers)) {
+          if (qData) {
+              const isCorrect = qData.type === 'type-answer' ?
+                  qData.answers.includes(answerData.answer as string) :
+                  answerData.answer === qData.solution;
+
+              if (isCorrect) {
+                  // Calculate points
+                  const timeLimit = qData.time || 15;
+                  // For a real implementation, startedAt should be recorded accurately per question
+                  // Using a rough timestamp here as game.updatedAt is used when setting state to SELECT_ANSWER
+                  const startTime = game.updatedAt;
+                  const elapsedSeconds = Math.max(0, (answerData.submittedAt - startTime) / 1000);
+                  const maxPoints = 1000;
+                  const decrement = maxPoints / (2 * Math.max(1, timeLimit));
+                  let points = maxPoints - (decrement * elapsedSeconds);
+                  points = Math.round(Math.max(500, Math.min(1000, points)));
+
+                  if (newPlayers[uid]) {
+                      newPlayers[uid].points = (newPlayers[uid].points || 0) + points;
+                  }
+              }
+          }
+      }
+  }
+
+  // Idempotent/Atomic update using transaction to prevent concurrent manager clicks
+  const { committed } = await gameRef.transaction((currentGame) => {
+      if (!currentGame) return undefined; // abort
+      // If someone else already changed the status from what we read, abort
+      if (currentGame.status !== game.status) {
+          // It was already modified, this is ok if it reached the desired state
+          if (currentGame.status === nextStatus) {
+              return undefined;
+          }
+          return undefined; // abort
+      }
+
+      currentGame.status = nextStatus;
+      currentGame.updatedAt = admin.database.ServerValue.TIMESTAMP;
+      if (game.currentQuestionIndex !== undefined) {
+         currentGame.currentQuestionIndex = game.currentQuestionIndex;
+      }
+      if (nextStatus === STATUS.SHOW_RESPONSES) {
+          currentGame.players = newPlayers;
+      }
+      return currentGame;
+  });
+
+  // If not committed, check if it was due to already being in the desired state
+  if (!committed) {
+      const currentState = (await gameRef.get()).val();
+      if (currentState?.status === nextStatus) {
+           // We are in desired state, return success
+           return { status: nextStatus };
+      }
+      throw new HttpsError("failed-precondition", "Failed to advance game due to concurrent modifications.");
+  }
+
+  // After transaction, optionally bundle the public question data (without solution)
+  if ([STATUS.SHOW_PREPARED, STATUS.SHOW_QUESTION, STATUS.SELECT_ANSWER, STATUS.SHOW_RESPONSES].includes(nextStatus as any)) {
+      const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
+      const qData = quizDoc.data()?.questions[game.currentQuestionIndex];
+      if (qData) {
+          // Omit solution from public client data
+          const { solution, ...publicData } = qData;
+          await gameRef.child('currentQuestionData').set(publicData);
+      }
+  } else if (nextStatus === STATUS.FINISHED) {
+      await gameRef.child('currentQuestionData').remove();
+
+      // Cleanup invite code mapping
+      const inviteCode = game.inviteCode;
+      if (inviteCode) {
+          const inviteRef = db.ref(`gamesByInviteCode/${inviteCode}`);
+          const inviteSnap = await inviteRef.get();
+          // Only delete if it belongs to this game (handles collisions slightly safer)
+          if (inviteSnap.exists() && inviteSnap.val().gameId === gameId) {
+             await inviteRef.remove();
+          }
+      }
+  }
+
+  return { status: nextStatus };
+});

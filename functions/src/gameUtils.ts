@@ -1,23 +1,38 @@
 import { getDatabase } from "firebase-admin/database"
+import * as crypto from "crypto";
 
 export const createInviteCode = async (length = 6): Promise<string> => {
-  const characters = "0123456789"
   const db = getDatabase()
   
-  let result = ""
   let attempts = 0
   const maxAttempts = 100
 
   do {
-    result = ""
-    for (let i = 0; i < length; i += 1) {
-      const randomIndex = Math.floor(Math.random() * characters.length)
-      result += characters.charAt(randomIndex)
-    }
+    // Generate secure random PIN
+    const min = Math.pow(10, length - 1)
+    const max = Math.pow(10, length) - 1
+    const result = crypto.randomInt(min, max + 1).toString()
 
-    // Check if code exists in RTDB
-    const snapshot = await db.ref(`gamesByInviteCode/${result}`).get()
-    if (!snapshot.exists()) {
+    // Use a transaction to safely reserve the PIN
+    const ref = db.ref(`gamesByInviteCode/${result}`)
+
+    const { committed } = await ref.transaction((currentData) => {
+        if (currentData !== null) {
+            // Already exists, check if expired to allow reuse
+            if (currentData.expiresAt > Date.now()) {
+                 return undefined; // Abort transaction, code in use
+            }
+        }
+
+        // Claim the code temporarily until the game sets it up properly
+        return {
+           reservedAt: Date.now(),
+           // Give a short window for createGame to finalize it, instead of a full day
+           expiresAt: Date.now() + 5 * 60 * 1000
+        };
+    });
+
+    if (committed) {
       return result
     }
 

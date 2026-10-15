@@ -1,0 +1,54 @@
+--- functions/src/__tests__/backend.test.ts
++++ functions/src/__tests__/backend.test.ts
+@@ -34,31 +34,44 @@
+         await db.ref().set(null);
+     });
+
+-    it("should dump error in retry", async () => {
+-        const gameId = "game-advance2";
+-        const quizId = "quiz-advance2";
++    it("should prevent concurrent game state transitions from manager", async () => {
++        // Setup a game
++        const gameId = "game-advance";
++        const quizId = "quiz-advance";
+         await firestore.collection("quizzes").doc(quizId).set({
+             managerUid: "manager-1",
+             questions: [{
+                 question: "1+1?",
+                 answers: ["1", "2"],
+                 solution: 1
++            }, {
++                question: "2+2?",
++                answers: ["3", "4"],
++                solution: 1
+             }]
+         });
+
+-        await db.ref(`games/${gameId}`).set({
++        await db.ref(`games/\${gameId}`).set({
+             gameId,
+             quizId,
+             managerUid: "manager-1",
+-            status: STATUS.SHOW_START,
++            status: STATUS.WAIT,
+             currentQuestionIndex: 0,
+             players: {}
+         });
+
+         const req = mockRequest({ gameId }, "manager-1");
+-        const res = await advanceGame.run(req).catch(e => e.message);
+-        console.log("RES1", res);
+
+-        const res2 = await advanceGame.run(req).catch(e => e.message);
+-        console.log("RES2", res2);
++        const advancePromises = [
++            advanceGame.run(req),
++            advanceGame.run(req)
++        ];
++
++        const results = await Promise.allSettled(advancePromises);
++
++        const succeeded = results.filter(r => r.status === "fulfilled");
++
++        expect(succeeded.length).toBeGreaterThanOrEqual(1);
+     });

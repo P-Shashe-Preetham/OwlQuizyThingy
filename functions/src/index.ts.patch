@@ -1,0 +1,24 @@
+--- functions/src/index.ts
++++ functions/src/index.ts
+@@ -275,6 +275,21 @@
+ // Get total quiz questions early
+   const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
+   const total = quizDoc.data()?.questions.length || 0;
+-  // Calculate finalNextStatus inside transaction
+-
++  let finalNextStatus: string = STATUS.WAIT;
++
++  if (game.status === STATUS.WAIT) finalNextStatus = STATUS.SHOW_START;
++  else if (game.status === STATUS.SHOW_START) finalNextStatus = STATUS.SHOW_PREPARED;
++  else if (game.status === STATUS.SHOW_PREPARED) finalNextStatus = STATUS.SHOW_QUESTION;
++  else if (game.status === STATUS.SHOW_QUESTION) finalNextStatus = STATUS.SELECT_ANSWER;
++  else if (game.status === STATUS.SELECT_ANSWER) finalNextStatus = STATUS.SHOW_RESPONSES;
++  else if (game.status === STATUS.SHOW_RESPONSES) finalNextStatus = STATUS.SHOW_LEADERBOARD;
++  else if (game.status === STATUS.SHOW_LEADERBOARD) {
++    if (game.currentQuestionIndex + 1 < total) {
++      game.currentQuestionIndex += 1;
++      finalNextStatus = STATUS.SHOW_PREPARED;
++    } else {
++      finalNextStatus = STATUS.FINISHED;
++    }
++  }

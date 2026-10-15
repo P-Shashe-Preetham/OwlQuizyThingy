@@ -1,0 +1,16 @@
+--- index.ts
++++ index.ts
+@@ -239,9 +239,9 @@
+       if (!currentGame) {
+           throw new HttpsError("not-found", "Game not found");
+       }
+-      if (currentGame.status !== STATUS.SELECT_ANSWER) {
+-          throw new HttpsError("failed-precondition", "Game is not in answering phase");
+-      }
+       if (currentGame.answers?.[currentGame.currentQuestionIndex]?.[uid!]) {
+-          throw new HttpsError("already-exists", "Answer already submitted");
++          return { success: true };
+       }
++      if (currentGame.status !== STATUS.SELECT_ANSWER) {
++          throw new HttpsError("failed-precondition", "Game is not in answering phase");
++      }

@@ -19,13 +19,23 @@ export const saveQuiz = onCall(async (request) => {
   requireAuth(request);
 
   // In a real implementation we would validate using Zod here
-  const { id, subject, settings, questions } = request.data;
+  const parsedData = (await import("@rahoot/common/validators/game")).quizzWithOptionalIdSchema.safeParse(request.data);
 
-  if (!subject || !questions || !Array.isArray(questions)) {
-      throw new HttpsError("invalid-argument", "Missing required quiz data.");
+  if (!parsedData.success) {
+      throw new HttpsError("invalid-argument", "Missing or invalid required quiz data.");
   }
 
+  const { id, subject, settings, questions } = parsedData.data;
+
   const quizId = id || uuidv4();
+
+  // Protect existing quiz ownership
+  if (id) {
+      const quizDoc = await firestore.collection("quizzes").doc(id).get();
+      if (quizDoc.exists && quizDoc.data()?.managerUid !== request.auth?.uid) {
+          throw new HttpsError("permission-denied", "You can only update your own quizzes");
+      }
+  }
 
   await firestore.collection("quizzes").doc(quizId).set({
       subject,
@@ -42,7 +52,7 @@ export const deleteQuiz = onCall(async (request) => {
     requireAuth(request);
     const { id } = request.data;
 
-    if (!id) {
+    if (!id || typeof id !== "string") {
         throw new HttpsError("invalid-argument", "Quiz ID is required");
     }
 
@@ -66,7 +76,7 @@ export const createGame = onCall(async (request) => {
   requireAuth(request);
 
   const { quizzId } = request.data;
-  if (!quizzId) throw new HttpsError("invalid-argument", "Missing quizzId");
+  if (!quizzId || typeof quizzId !== "string") throw new HttpsError("invalid-argument", "Missing or invalid quizzId");
 
   // Fetch Quiz
   const quizDoc = await firestore.collection("quizzes").doc(quizzId).get();
@@ -108,7 +118,7 @@ export const createGame = onCall(async (request) => {
 
 export const getGameByPin = onCall(async (request) => {
   const { pin } = request.data;
-  if (!pin) throw new HttpsError("invalid-argument", "Missing PIN");
+  if (!pin || typeof pin !== "string" || pin.length !== 6) throw new HttpsError("invalid-argument", "Missing or invalid PIN");
 
   const snapshot = await db.ref(`gamesByInviteCode/${pin}`).get();
   if (!snapshot.exists()) throw new HttpsError("not-found", "Game not found");
@@ -123,37 +133,57 @@ export const getGameByPin = onCall(async (request) => {
 
 export const joinGame = onCall(async (request) => {
   requireAuth(request);
-  const { gameId, username } = request.data;
-  if (!gameId || !username) throw new HttpsError("invalid-argument", "Missing parameters");
+  const parsed = (await import("@rahoot/common/validators/game")).playerLoginSchema.safeParse(request.data);
+  if (!parsed.success) {
+      throw new HttpsError("invalid-argument", "Invalid parameters");
+  }
+  const { gameId, data: { username } } = parsed.data;
 
   const uid = request.auth?.uid;
   const gameRef = db.ref(`games/${gameId}`);
+
+  // Fetch once to know the fallback if not cached
   const snap = await gameRef.get();
-
-  if (!snap.exists()) throw new HttpsError("not-found", "Game not found");
-
   const game = snap.val();
-  if (game.status !== STATUS.WAIT) {
-      throw new HttpsError("failed-precondition", "Game has already started or finished");
-  }
 
-  await gameRef.child("players").child(uid!).set({
-    username,
-    points: 0,
-    connected: true,
-    joinedAt: admin.database.ServerValue.TIMESTAMP,
+  // Try to use a transaction to avoid concurrent join issues
+  const { committed } = await gameRef.transaction((currentGame) => {
+      if (!currentGame) return game; // let it retry
+      if (currentGame.status !== STATUS.WAIT) return undefined; // abort
+
+      if (!currentGame.players) currentGame.players = {};
+
+      currentGame.players[uid!] = {
+          username,
+          points: 0,
+          connected: true,
+          joinedAt: admin.database.ServerValue.TIMESTAMP,
+      };
+
+      return currentGame;
   });
+
+  if (!committed) {
+       const game = (await gameRef.get()).val();
+       if (!game) {
+           throw new HttpsError("not-found", "Game not found");
+       }
+       if (game.status !== STATUS.WAIT) {
+           throw new HttpsError("failed-precondition", "Game has already started or finished");
+       }
+       throw new HttpsError("internal", "Failed to join game due to concurrent modifications.");
+  }
 
   return { success: true };
 });
 
 export const kickPlayer = onCall(async (request) => {
     requireAuth(request);
-    const { gameId, playerId } = request.data;
-
-    if (!gameId || !playerId) {
+    const parsed = (await import("@rahoot/common/validators/game")).kickPlayerSchema.safeParse(request.data);
+    if (!parsed.success) {
         throw new HttpsError("invalid-argument", "gameId and playerId are required");
     }
+    const { gameId, playerId } = parsed.data;
 
     const gameRef = db.ref(`games/${gameId}`);
     const snap = await gameRef.get();
@@ -171,42 +201,66 @@ export const kickPlayer = onCall(async (request) => {
 
 export const submitAnswer = onCall(async (request) => {
   requireAuth(request);
-  const { gameId, answerKey } = request.data;
-  const uid = request.auth?.uid;
-
-  if (!gameId || answerKey === undefined) {
-      throw new HttpsError("invalid-argument", "Missing gameId or answerKey");
+  const parsed = (await import("@rahoot/common/validators/game")).selectedAnswerSchema.safeParse(request.data);
+  if (!parsed.success) {
+      throw new HttpsError("invalid-argument", "Missing or invalid gameId or answerKey");
   }
+  const { gameId, data: { answerKey } } = parsed.data;
+  const uid = request.auth?.uid;
 
   const gameRef = db.ref(`games/${gameId}`);
 
-  let didSubmit = false;
-  // Use a transaction to safely record answer
-  await gameRef.transaction((game) => {
-    if (!game) return game;
-    if (game.status !== STATUS.SELECT_ANSWER) return game; // Abort transaction
+  const snap = await gameRef.get();
+
+  if (!snap.exists()) {
+      throw new HttpsError("not-found", "Game not found");
+  }
+
+  let answerIdempotentSuccess = false;
+  const game = snap.val();
+  const { committed } = await gameRef.transaction((currentGame) => {
+    if (!currentGame) return game; // let it retry if not cached locally
 
     // Ensure player is in game
-    if (!game.players || !game.players[uid!]) return game;
+    if (!currentGame.players || !currentGame.players[uid!]) return undefined; // abort
 
-    if (!game.answers) game.answers = {};
-    if (!game.answers[game.currentQuestionIndex]) game.answers[game.currentQuestionIndex] = {};
+    if (currentGame.status !== STATUS.SELECT_ANSWER) return undefined; // Abort transaction
 
-    // Prevent duplicate submission
-    if (game.answers[game.currentQuestionIndex][uid!]) return game;
+    // If already submitted, return early successfully (idempotent retry)
+    if (currentGame.answers && currentGame.answers[currentGame.currentQuestionIndex] && currentGame.answers[currentGame.currentQuestionIndex][uid!]) {
+        answerIdempotentSuccess = true;
+        return undefined; // We actually abort the write but we'll check it afterward
+    }
 
-    game.answers[game.currentQuestionIndex][uid!] = {
+    if (!currentGame.answers) currentGame.answers = {};
+    if (!currentGame.answers[currentGame.currentQuestionIndex]) currentGame.answers[currentGame.currentQuestionIndex] = {};
+
+    currentGame.answers[currentGame.currentQuestionIndex][uid!] = {
       answer: answerKey,
       submittedAt: admin.database.ServerValue.TIMESTAMP
     };
 
-    didSubmit = true;
-
-    return game;
+    return currentGame;
   });
 
-  if (!didSubmit) {
-      throw new HttpsError("failed-precondition", "Answer could not be submitted (game state invalid or duplicate)");
+  if (!committed) {
+      if (answerIdempotentSuccess) {
+          return { success: true };
+      }
+      const currentGame = (await gameRef.get()).val();
+      if (!currentGame) {
+          throw new HttpsError("not-found", "Game not found");
+      }
+      if (currentGame.answers?.[currentGame.currentQuestionIndex]?.[uid!]) {
+          return { success: true };
+      }
+      if (currentGame.status !== STATUS.SELECT_ANSWER) {
+          throw new HttpsError("failed-precondition", "Game is not in answering phase");
+      }
+      if (!currentGame.players || !currentGame.players[uid!]) {
+          throw new HttpsError("permission-denied", "Player is not in this game");
+      }
+      throw new HttpsError("internal", "Failed to submit answer due to concurrent modifications.");
   }
 
   return { success: true };
@@ -215,8 +269,8 @@ export const submitAnswer = onCall(async (request) => {
 export const advanceGame = onCall(async (request) => {
   requireAuth(request);
   const { gameId } = request.data;
-  if (!gameId) {
-      throw new HttpsError("invalid-argument", "Missing gameId");
+  if (!gameId || typeof gameId !== "string") {
+      throw new HttpsError("invalid-argument", "Missing or invalid gameId");
   }
 
   const gameRef = db.ref(`games/${gameId}`);
@@ -227,32 +281,29 @@ export const advanceGame = onCall(async (request) => {
 
   if (game.managerUid !== request.auth?.uid) throw new HttpsError("permission-denied", "Only manager can advance");
 
-  let nextStatus: string = STATUS.WAIT;
-
-  if (game.status === STATUS.WAIT) nextStatus = STATUS.SHOW_START;
-  else if (game.status === STATUS.SHOW_START) nextStatus = STATUS.SHOW_PREPARED;
-  else if (game.status === STATUS.SHOW_PREPARED) nextStatus = STATUS.SHOW_QUESTION;
-  else if (game.status === STATUS.SHOW_QUESTION) nextStatus = STATUS.SELECT_ANSWER;
-  else if (game.status === STATUS.SELECT_ANSWER) nextStatus = STATUS.SHOW_RESPONSES;
-  else if (game.status === STATUS.SHOW_RESPONSES) nextStatus = STATUS.SHOW_LEADERBOARD;
+// Get total quiz questions early
+  const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
+  const total = quizDoc.data()?.questions.length || 0;
+  // Calculate finalNextStatus inside transaction
+  let finalNextStatus: string = STATUS.WAIT;
+  if (game.status === STATUS.WAIT) finalNextStatus = STATUS.SHOW_START;
+  else if (game.status === STATUS.SHOW_START) finalNextStatus = STATUS.SHOW_PREPARED;
+  else if (game.status === STATUS.SHOW_PREPARED) finalNextStatus = STATUS.SHOW_QUESTION;
+  else if (game.status === STATUS.SHOW_QUESTION) finalNextStatus = STATUS.SELECT_ANSWER;
+  else if (game.status === STATUS.SELECT_ANSWER) finalNextStatus = STATUS.SHOW_RESPONSES;
+  else if (game.status === STATUS.SHOW_RESPONSES) finalNextStatus = STATUS.SHOW_LEADERBOARD;
   else if (game.status === STATUS.SHOW_LEADERBOARD) {
-    // Check if more questions
-    // This requires reading the quiz from Firestore to know total questions
-    const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
-    const total = quizDoc.data()?.questions.length || 0;
-
     if (game.currentQuestionIndex + 1 < total) {
       game.currentQuestionIndex += 1;
-      nextStatus = STATUS.SHOW_PREPARED;
+      finalNextStatus = STATUS.SHOW_PREPARED;
     } else {
-      nextStatus = STATUS.FINISHED;
+      finalNextStatus = STATUS.FINISHED;
     }
   }
 
   // Calculate scoring if transitioning out of SELECT_ANSWER
   const newPlayers = { ...game.players };
-  if (game.status === STATUS.SELECT_ANSWER && nextStatus === STATUS.SHOW_RESPONSES) {
-      const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
+  if (game.status === STATUS.SELECT_ANSWER && finalNextStatus === STATUS.SHOW_RESPONSES) {
       const qData = quizDoc.data()?.questions[game.currentQuestionIndex];
 
       const currentAnswers = game.answers?.[game.currentQuestionIndex] || {};
@@ -284,34 +335,76 @@ export const advanceGame = onCall(async (request) => {
   }
 
   // Idempotent/Atomic update using transaction to prevent concurrent manager clicks
-  await gameRef.transaction((currentGame) => {
-      if (!currentGame) return currentGame;
-      // If someone else already changed the status from what we read, abort
-      if (currentGame.status !== game.status) return currentGame;
-
-      currentGame.status = nextStatus;
-      currentGame.updatedAt = admin.database.ServerValue.TIMESTAMP;
-      if (game.currentQuestionIndex !== undefined) {
-         currentGame.currentQuestionIndex = game.currentQuestionIndex;
+  const { committed, snapshot } = await gameRef.transaction((currentGame) => {
+      if (!currentGame) {
+           return game; // let it retry
       }
-      if (nextStatus === STATUS.SHOW_RESPONSES) {
+
+      if (currentGame.status === finalNextStatus) {
+         return undefined;
+      }
+      // If someone else already changed the status from what we read, abort
+      if (currentGame.status !== game.status) return undefined;
+
+      currentGame.status = finalNextStatus;
+      currentGame.updatedAt = admin.database.ServerValue.TIMESTAMP;
+      if (currentGame.currentQuestionIndex !== undefined) {
+         let nqi = currentGame.currentQuestionIndex;
+         if (currentGame.status === STATUS.SHOW_LEADERBOARD && finalNextStatus === STATUS.SHOW_PREPARED) {
+             nqi += 1;
+         }
+         currentGame.currentQuestionIndex = nqi;
+      }
+      if (finalNextStatus === STATUS.SHOW_RESPONSES) {
           currentGame.players = newPlayers;
       }
       return currentGame;
   });
 
+  // If not committed, check if it was due to already being in the desired state
+  if (!committed) {
+      const currentGame = snapshot?.val() || (await gameRef.get()).val();
+
+      if (currentGame && currentGame.status === finalNextStatus) {
+           return { status: finalNextStatus };
+      } else if (currentGame && currentGame.status !== game.status) {
+           // It advanced but to something else
+           throw new HttpsError("failed-precondition", "Failed to advance game due to concurrent modifications.");
+      } else {
+           throw new HttpsError("failed-precondition", "Failed to advance game.");
+      }
+  }
+
   // After transaction, optionally bundle the public question data (without solution)
-  if ([STATUS.SHOW_PREPARED, STATUS.SHOW_QUESTION, STATUS.SELECT_ANSWER, STATUS.SHOW_RESPONSES].includes(nextStatus as any)) {
+  if ([STATUS.SHOW_PREPARED, STATUS.SHOW_QUESTION, STATUS.SELECT_ANSWER, STATUS.SHOW_RESPONSES].includes(finalNextStatus as any)) {
       const quizDoc = await firestore.collection("quizzes").doc(game.quizId).get();
       const qData = quizDoc.data()?.questions[game.currentQuestionIndex];
       if (qData) {
           // Omit solution from public client data
           const { solution, ...publicData } = qData;
+
+          // For type-answer questions, the valid answers are stored in the "answers" array itself!
+          // We MUST hide the answers array until the SHOW_RESPONSES state.
+          if (qData.type === 'type-answer' && finalNextStatus !== STATUS.SHOW_RESPONSES) {
+              publicData.answers = [];
+          }
+
           await gameRef.child('currentQuestionData').set(publicData);
       }
-  } else if (nextStatus === STATUS.FINISHED) {
+  } else if (finalNextStatus === STATUS.FINISHED) {
       await gameRef.child('currentQuestionData').remove();
+
+      // Cleanup invite code mapping
+      const inviteCode = game.inviteCode;
+      if (inviteCode) {
+          const inviteRef = db.ref(`gamesByInviteCode/${inviteCode}`);
+          const inviteSnap = await inviteRef.get();
+          // Only delete if it belongs to this game (handles collisions slightly safer)
+          if (inviteSnap.exists() && inviteSnap.val().gameId === gameId) {
+             await inviteRef.remove();
+          }
+      }
   }
 
-  return { status: nextStatus };
+  return { status: finalNextStatus };
 });
